@@ -1,0 +1,1 @@
+Builds Inno scripts and batch files for copying dependencies
