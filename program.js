@@ -189,7 +189,7 @@ function GenerateArtifactBatchCopy(artifactFullPath)
 		copy = copy + "if not exist \"%param1%\\" + artifactFullPath + "\" (\r\n";
 		copy = copy + "\tcopy /Y \"%param1%\\dependencies_svn\\dlls\\internal\\" + artifactFilename + "\" \"%param2%\"\r\n";
 		copy = copy + "\tif errorlevel 1 echo \"Error in %0\" exit\r\n";
-		copy = copy + "}\r\n";
+		copy = copy + ")\r\n";
 		copy = copy + "\r\n";		
 	}
 	
