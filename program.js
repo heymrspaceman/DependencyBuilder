@@ -18,9 +18,12 @@ var path = require('path');
 var async = require('async');
 var fileContents = ""
 var belongsTo = [];
+var externalBelongsTo = [];
 var componentsPath = [];
+var externalComponentsPath = [];
 var project = "";
 var componentsDir = "D:\\nodejs\\DependencyBuilder\\Dependencies\\Components";
+var externalComponentsDir = "D:\\nodejs\\DependencyBuilder\\Dependencies\\Components\\external";
 var referencesDir = "D:\\nodejs\\DependencyBuilder\\Dependencies\\References";
 var scriptsDir = "D:\\nodejs\\DependencyBuilder\\Dependencies\\Generated scripts";
 var postBuildBatchFilesDir = "D:\\nodejs\\DependencyBuilder\\Dependencies\\Generated scripts\\postbuild";
@@ -33,23 +36,57 @@ fs.readdir(componentsDir, function(err, files)
 {
 	//forEach are synchronous
 	files.forEach(function(file) {
-		console.log("-" + file);		
-
-		fileContents = fs.readFileSync(path.join(componentsDir, file), 'UTF-8');
-		fileContents.split(',').forEach(function(element) {
-			// Each component is split into the projec name and the actual path to the artifact
-			var elementSplit = element.trim().split(":");
-			
-			project = elementSplit[0];
-			
-			belongsTo[project] = file;
-			if (elementSplit.length > 1)
-			{
-				componentsPath[project] = elementSplit[1];
-			}
-			console.log(project + " from " + file);
-		}, this);
+		console.log("-" + file);	
+		var fullPath = path.join(componentsDir, file);
+		
+		if (!fs.statSync(fullPath).isDirectory())
+		{
+			fileContents = fs.readFileSync(fullPath, 'UTF-8');
+	
+			fileContents.split(',').forEach(function(element) {
+				// Each component is split into the project name and the actual path to the artifact
+				var elementSplit = element.trim().split(":");
+				
+				project = elementSplit[0];
+				
+				belongsTo[project] = file;
+				if (elementSplit.length > 1)
+				{
+					componentsPath[project] = elementSplit[1];
+				}
+				console.log(project + " from " + file);
+			}, this);
+		}
 	}, this);
+	
+	fs.readdir(externalComponentsDir, function(err, files)
+	{
+		//forEach are synchronous
+		files.forEach(function(file) {
+			console.log("EXTERNAL - " + file);	
+			var fullPath = path.join(externalComponentsDir, file);
+			
+			if (!fs.statSync(fullPath).isDirectory())
+			{
+				fileContents = fs.readFileSync(fullPath, 'UTF-8');				
+	
+				fileContents.split(',').forEach(function(element) {
+					// Each component is split into the project name and the actual path to the artifact
+					var elementSplit = element.trim().split(":");
+					
+					project = elementSplit[0];
+					
+					externalBelongsTo[project] = file;
+					if (elementSplit.length > 1)
+					{
+						externalComponentsPath[project] = elementSplit[1];
+					}
+					console.log(project + " from " + elementSplit[1]);
+				}, this);
+			}			
+		});
+	});
+	
 	
 	// Synchronous forEachs will have all finished by now
 	
@@ -81,7 +118,8 @@ function ReadProjectDir(projectFile, bottomDir)
 	
 	var referenceFileContents = fs.readFileSync(projectFile, 'UTF-8');
 	var reference = "";
-	var references = [];			
+	var references = [];		
+	var externalReferences = [];			
 	referenceFileContents.split(',').forEach(function(element) {
 		reference = element.trim();
 		if (belongsTo[reference] !== undefined)
@@ -90,13 +128,25 @@ function ReadProjectDir(projectFile, bottomDir)
 			//console.log("[" + belongsTo[reference]  +"] " + reference);
 			references.push(reference);
 		}
+		else
+		{
+			// Check external refernces
+			if (externalBelongsTo[reference] !== undefined)
+			{
+				externalReferences.push(reference);
+			}
+			else
+			{
+				console.log("reference not found: " + reference);
+			}
+		}
 	}, this);
 		
-	CreateIssDependencyScript(component, references);
+	CreateIssDependencyScript(component, references, externalReferences);
 	CreatePostBuildBatchFile(component, references);
 }
 
-function CreateIssDependencyScript(component, dependencies)
+function CreateIssDependencyScript(component, internalDepencencies, externalDependencies)
 {
 	var filename = component + "_dependencies.iss";
 	var fileContents = "[Files]\r\n;Internal\r\n";
@@ -114,11 +164,26 @@ function CreateIssDependencyScript(component, dependencies)
 	// Add artifacts here
 	fileContents = fileContents + artifactsIncludes + "\r\n";
 		
-	dependencies.forEach(function(dep) {
+	internalDepencencies.forEach(function(dep) {
 		fileContents = fileContents + "#include \"" + dep + "_dependencies.iss\"\r\n";
 	}, this);
+		
+	if (externalDependencies.length > 0) {
+		fileContents = fileContents + "\r\n;External";
+		externalDependencies.forEach(function(dep) {
+			fileContents = fileContents + GenerateExternalIssCopy(dep, externalComponentsPath[dep]);
+		}, this);
+	}
 	
 	fs.writeFile(filename, fileContents);
+}
+
+// At the moment this only handles one file per external
+function GenerateExternalIssCopy(dep, file)
+{
+	var issCopy = "\r\n;" + dep + "\r\n";
+	issCopy = issCopy + "Source: \"..\\Dependencies_svn\\dlls\\external\\" + file + "\"; DestDir: \"{app}\{#DestSubDir}\"; Flags: ignoreversion\r\n";
+	return issCopy;
 }
 
 // TODO refactor this with GenerateArtifactBatchCopy
@@ -189,7 +254,7 @@ function GenerateArtifactBatchCopy(artifactFullPath)
 		copy = copy + "if not exist \"%param1%\\" + artifactFullPath + "\" (\r\n";
 		copy = copy + "\tcopy /Y \"%param1%\\dependencies_svn\\dlls\\internal\\" + artifactFilename + "\" \"%param2%\"\r\n";
 		copy = copy + "\tif errorlevel 1 echo \"Error in %0\" exit\r\n";
-		copy = copy + "}\r\n";
+		copy = copy + ")\r\n";
 		copy = copy + "\r\n";		
 	}
 	
