@@ -79,7 +79,13 @@ fs.readdir(componentsDir, function(err, files)
 					externalBelongsTo[project] = file;
 					if (elementSplit.length > 1)
 					{
-						externalComponentsPath[project] = elementSplit[1];
+						console.log("Look for project: " + project);
+						// Check if this project appears in externalComponentsPath
+						if (externalComponentsPath[project] == undefined)
+						{
+							externalComponentsPath[project] = [];
+						}
+						externalComponentsPath[project].push(elementSplit[1]);
 					}
 					console.log(project + " from " + elementSplit[1]);
 				}, this);
@@ -179,10 +185,12 @@ function CreateIssDependencyScript(component, internalDepencencies, externalDepe
 }
 
 // At the moment this only handles one file per external
-function GenerateExternalIssCopy(dep, file)
+function GenerateExternalIssCopy(dep, files)
 {
 	var issCopy = "\r\n;" + dep + "\r\n";
-	issCopy = issCopy + "Source: \"..\\Dependencies_svn\\dlls\\external\\" + file + "\"; DestDir: \"{app}\{#DestSubDir}\"; Flags: ignoreversion\r\n";
+	files.forEach(function(file) {
+		issCopy = issCopy + "Source: \"..\\Dependencies_svn\\dlls\\external\\" + file + "\"; DestDir: \"{app}\\{#DestSubDir}\"; Flags: ignoreversion\r\n";
+	}, this);
 	return issCopy;
 }
 
