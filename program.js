@@ -31,32 +31,9 @@ var postBuildBatchFilesDir = path.join(rootDir, "Dependencies\\Generated scripts
 //fs.mkdirSync(scriptsDir);
 //fs.mkdirSync(postBuildScriptsDir);
 
-fs.readdir(internalComponentsDir, function(err, files)
+fs.readdir(internalComponentsDir, function(err, internalFiles)
 {
-	//forEach are synchronous
-	files.forEach(function(file) {
-		console.log("-" + file);	
-		var fullPath = path.join(internalComponentsDir, file);
-		
-		if (!fs.statSync(fullPath).isDirectory())
-		{
-			var fileContents = fs.readFileSync(fullPath, 'UTF-8');
-	
-			fileContents.split(',').forEach(function(element) {
-				// Each component is split into the project name and the actual path to the artifact
-				var elementSplit = element.trim().split(":");
-				
-				var project = elementSplit[0];
-				
-				internalBelongsTo[project] = file;
-				if (elementSplit.length > 1)
-				{
-					internalComponentsPath[project] = elementSplit[1];
-				}
-				console.log(project + " from " + file);
-			}, this);
-		}
-	}, this);
+	ReadInternalComponents(internalComponentsDir, internalFiles, internalBelongsTo, internalComponentsPath);	
 	
 	fs.readdir(externalComponentsDir, function(err, files)
 	{
@@ -71,6 +48,34 @@ fs.readdir(internalComponentsDir, function(err, files)
 		}
 	});
 });
+
+function ReadInternalComponents(componentsDir, files, belongsTo, componentsPath)
+{
+	//forEach are synchronous
+	files.forEach(function(file) {
+		console.log("-" + file);	
+		var fullPath = path.join(componentsDir, file);
+		
+		if (!fs.statSync(fullPath).isDirectory())
+		{
+			var fileContents = fs.readFileSync(fullPath, 'UTF-8');
+	
+			fileContents.split(',').forEach(function(element) {
+				// Each component is split into the project name and the actual path to the artifact
+				var elementSplit = element.trim().split(":");
+				
+				var project = elementSplit[0];
+				
+				belongsTo[project] = file;
+				if (elementSplit.length > 1)
+				{
+					componentsPath[project] = elementSplit[1];
+				}
+				console.log(project + " from " + file);
+			}, this);
+		}
+	}, this);
+}
 
 function ReadExternalComponents(componentsDir, files, belongsTo, componentsPath)
 {	
