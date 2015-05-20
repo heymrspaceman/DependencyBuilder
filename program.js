@@ -16,14 +16,12 @@
 var fs = require('fs');
 var path = require('path');
 var async = require('async');
-var fileContents = ""
-var belongsTo = [];
+var internalBelongsTo = [];
 var externalBelongsTo = [];
-var componentsPath = [];
+var internalComponentsPath = [];
 var externalComponentsPath = [];
-var project = "";
 var rootDir = "D:\\nodejs\\DependencyBuilder";
-var componentsDir = path.join(rootDir, "Dependencies\\Components");
+var internalComponentsDir = path.join(rootDir, "Dependencies\\Components");
 var externalComponentsDir = path.join(rootDir, "Dependencies\\Components\\external");
 var referencesDir = path.join(rootDir, "Dependencies\\References");
 var scriptsDir = path.join(rootDir, "Dependencies\\Generated scripts");
@@ -33,27 +31,27 @@ var postBuildBatchFilesDir = path.join(rootDir, "Dependencies\\Generated scripts
 //fs.mkdirSync(scriptsDir);
 //fs.mkdirSync(postBuildScriptsDir);
 
-fs.readdir(componentsDir, function(err, files)
+fs.readdir(internalComponentsDir, function(err, files)
 {
 	//forEach are synchronous
 	files.forEach(function(file) {
 		console.log("-" + file);	
-		var fullPath = path.join(componentsDir, file);
+		var fullPath = path.join(internalComponentsDir, file);
 		
 		if (!fs.statSync(fullPath).isDirectory())
 		{
-			fileContents = fs.readFileSync(fullPath, 'UTF-8');
+			var fileContents = fs.readFileSync(fullPath, 'UTF-8');
 	
 			fileContents.split(',').forEach(function(element) {
 				// Each component is split into the project name and the actual path to the artifact
 				var elementSplit = element.trim().split(":");
 				
-				project = elementSplit[0];
+				var project = elementSplit[0];
 				
-				belongsTo[project] = file;
+				internalBelongsTo[project] = file;
 				if (elementSplit.length > 1)
 				{
-					componentsPath[project] = elementSplit[1];
+					internalComponentsPath[project] = elementSplit[1];
 				}
 				console.log(project + " from " + file);
 			}, this);
@@ -83,13 +81,13 @@ function ReadExternalComponents(componentsDir, files, belongsTo, componentsPath)
 		
 		if (!fs.statSync(fullPath).isDirectory())
 		{
-			fileContents = fs.readFileSync(fullPath, 'UTF-8');				
+			var fileContents = fs.readFileSync(fullPath, 'UTF-8');				
 
 			fileContents.split(',').forEach(function(element) {
 				// Each component is split into the project name and the actual path to the artifact
 				var elementSplit = element.trim().split(":");
 				
-				project = elementSplit[0];
+				var project = elementSplit[0];
 				
 				belongsTo[project] = file;
 				if (elementSplit.length > 1)
@@ -132,7 +130,7 @@ function ReadProjectDir(projectFile, bottomDir)
 	var externalReferences = [];			
 	referenceFileContents.split(',').forEach(function(element) {
 		reference = element.trim();
-		if (belongsTo[reference] !== undefined)
+		if (internalBelongsTo[reference] !== undefined)
 		{
 			// This belongsTo can be used for CruiseControl
 			//console.log("[" + belongsTo[reference]  +"] " + reference);
@@ -163,7 +161,7 @@ function CreateIssDependencyScript(component, internalDepencencies, externalDepe
 	filename = path.join(scriptsDir, filename);
 	
 	// Build artifacts
-	var artifact = componentsPath[component];
+	var artifact = internalComponentsPath[component];
 	var artifactsIncludes = GenerateArtifactInclude(artifact);
 	
 	// If there is a .exe present, then get the .exe.config also
@@ -225,7 +223,7 @@ function GenerateArtifactInclude(artifactFullPath)
 
 function CreatePostBuildBatchFile(component, dependencies)
 {
-	var artifact = componentsPath[component];
+	var artifact = internalComponentsPath[component];
 	var filename = "CopyDependenciesInternal" + component +  ".bat";
 	
 	var fileContents = "@echo off\r\n";
