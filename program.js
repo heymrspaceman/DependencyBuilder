@@ -61,48 +61,51 @@ fs.readdir(componentsDir, function(err, files)
 	
 	fs.readdir(externalComponentsDir, function(err, files)
 	{
-		//forEach are synchronous
-		files.forEach(function(file) {
-			console.log("EXTERNAL - " + file);	
-			var fullPath = path.join(externalComponentsDir, file);
-			
-			if (!fs.statSync(fullPath).isDirectory())
-			{
-				fileContents = fs.readFileSync(fullPath, 'UTF-8');				
-	
-				fileContents.split(',').forEach(function(element) {
-					// Each component is split into the project name and the actual path to the artifact
-					var elementSplit = element.trim().split(":");
-					
-					project = elementSplit[0];
-					
-					externalBelongsTo[project] = file;
-					if (elementSplit.length > 1)
-					{
-						console.log("Look for project: " + project);
-						// Check if this project appears in externalComponentsPath
-						if (externalComponentsPath[project] == undefined)
-						{
-							externalComponentsPath[project] = [];
-						}
-						externalComponentsPath[project].push(elementSplit[1]);
-					}
-					console.log(project + " from " + elementSplit[1]);
-				}, this);
-			}			
-		});
+		ReadExternalComponents(externalComponentsDir, files, externalBelongsTo, externalComponentsPath);	
 	});
 	
-	
-	// Synchronous forEachs will have all finished by now
-	
+	// Synchronous forEachs will have all finished by now	
 	fs.readdir(referencesDir, function(err, solutionDirs)
 	{	
 		for (var i = 0; i < solutionDirs.length; i++) {			
 			ReadSolutionDir(path.join(referencesDir, solutionDirs[i]));			
 		}
-	})
+	});
 });
+
+function ReadExternalComponents(componentsDir, files, belongsTo, componentsPath)
+{	
+	//forEach are synchronous
+	files.forEach(function(file) {
+		console.log("EXTERNAL - " + file);	
+		var fullPath = path.join(componentsDir, file);
+		
+		if (!fs.statSync(fullPath).isDirectory())
+		{
+			fileContents = fs.readFileSync(fullPath, 'UTF-8');				
+
+			fileContents.split(',').forEach(function(element) {
+				// Each component is split into the project name and the actual path to the artifact
+				var elementSplit = element.trim().split(":");
+				
+				project = elementSplit[0];
+				
+				belongsTo[project] = file;
+				if (elementSplit.length > 1)
+				{
+					console.log("Look for project: " + project);
+					// Check if this project appears in componentsPath
+					if (componentsPath[project] == undefined)
+					{
+						componentsPath[project] = [];
+					}
+					componentsPath[project].push(elementSplit[1]);
+				}
+				console.log(project + " from " + elementSplit[1]);
+			}, this);
+		}			
+	});
+}
 
 function ReadSolutionDir(solutionDir)
 {
