@@ -53,7 +53,6 @@ function ReadInternalComponents(componentsDir, files, belongsTo, componentsPath)
 {
 	//forEach are synchronous
 	files.forEach(function(file) {
-		console.log("-" + file);	
 		var fullPath = path.join(componentsDir, file);
 		
 		if (!fs.statSync(fullPath).isDirectory())
@@ -69,9 +68,13 @@ function ReadInternalComponents(componentsDir, files, belongsTo, componentsPath)
 				belongsTo[project] = file;
 				if (elementSplit.length > 1)
 				{
-					componentsPath[project] = elementSplit[1];
+					// Add this to the list of components
+					if (componentsPath[project] == undefined)
+					{
+						componentsPath[project] = [];
+					}
+					componentsPath[project].push(elementSplit[1]);
 				}
-				console.log(project + " from " + file);
 			}, this);
 		}
 	}, this);
@@ -81,7 +84,6 @@ function ReadExternalComponents(componentsDir, files, belongsTo, componentsPath)
 {	
 	//forEach are synchronous
 	files.forEach(function(file) {
-		console.log("EXTERNAL - " + file);	
 		var fullPath = path.join(componentsDir, file);
 		
 		if (!fs.statSync(fullPath).isDirectory())
@@ -97,15 +99,13 @@ function ReadExternalComponents(componentsDir, files, belongsTo, componentsPath)
 				belongsTo[project] = file;
 				if (elementSplit.length > 1)
 				{
-					console.log("Look for project: " + project);
-					// Check if this project appears in componentsPath
+					// Add this to the list of components
 					if (componentsPath[project] == undefined)
 					{
 						componentsPath[project] = [];
 					}
 					componentsPath[project].push(elementSplit[1]);
 				}
-				console.log(project + " from " + elementSplit[1]);
 			}, this);
 		}			
 	});
@@ -159,6 +159,16 @@ function ReadProjectDir(projectFile, bottomDir)
 	CreatePostBuildBatchFile(component, references);
 }
 
+function GetArtifact(component)
+{
+	if (internalComponentsPath[component] !== undefined)
+	{
+		return internalComponentsPath[component][0];
+	}
+	
+	return undefined;
+}
+
 function CreateIssDependencyScript(component, internalDepencencies, externalDependencies)
 {
 	var filename = component + "_dependencies.iss";
@@ -166,7 +176,8 @@ function CreateIssDependencyScript(component, internalDepencencies, externalDepe
 	filename = path.join(scriptsDir, filename);
 	
 	// Build artifacts
-	var artifact = internalComponentsPath[component];
+	var artifact = GetArtifact(component);
+	
 	var artifactsIncludes = GenerateArtifactInclude(artifact);
 	
 	// If there is a .exe present, then get the .exe.config also
@@ -228,7 +239,7 @@ function GenerateArtifactInclude(artifactFullPath)
 
 function CreatePostBuildBatchFile(component, dependencies)
 {
-	var artifact = internalComponentsPath[component];
+	var artifact = GetArtifact(component);
 	var filename = "CopyDependenciesInternal" + component +  ".bat";
 	
 	var fileContents = "@echo off\r\n";
