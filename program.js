@@ -33,11 +33,11 @@ var postBuildBatchFilesDir = path.join(rootDir, "Dependencies\\Generated scripts
 
 fs.readdir(internalComponentsDir, function(err, internalFiles)
 {
-	ReadInternalComponents(internalComponentsDir, internalFiles, internalBelongsTo, internalComponentsPath);	
+	ReadComponents(internalComponentsDir, internalFiles, internalBelongsTo, internalComponentsPath);	
 	
 	fs.readdir(externalComponentsDir, function(err, files)
 	{
-		ReadExternalComponents(externalComponentsDir, files, externalBelongsTo, externalComponentsPath);	
+		ReadComponents(externalComponentsDir, files, externalBelongsTo, externalComponentsPath);	
 	});
 	
 	// Synchronous forEachs will have all finished by now	
@@ -49,7 +49,7 @@ fs.readdir(internalComponentsDir, function(err, internalFiles)
 	});
 });
 
-function ReadInternalComponents(componentsDir, files, belongsTo, componentsPath)
+function ReadComponents(componentsDir, files, belongsTo, componentsPath)
 {
 	//forEach are synchronous
 	files.forEach(function(file) {
@@ -78,37 +78,6 @@ function ReadInternalComponents(componentsDir, files, belongsTo, componentsPath)
 			}, this);
 		}
 	}, this);
-}
-
-function ReadExternalComponents(componentsDir, files, belongsTo, componentsPath)
-{	
-	//forEach are synchronous
-	files.forEach(function(file) {
-		var fullPath = path.join(componentsDir, file);
-		
-		if (!fs.statSync(fullPath).isDirectory())
-		{
-			var fileContents = fs.readFileSync(fullPath, 'UTF-8');				
-
-			fileContents.split(',').forEach(function(element) {
-				// Each component is split into the project name and the actual path to the artifact
-				var elementSplit = element.trim().split(":");
-				
-				var project = elementSplit[0];
-				
-				belongsTo[project] = file;
-				if (elementSplit.length > 1)
-				{
-					// Add this to the list of components
-					if (componentsPath[project] == undefined)
-					{
-						componentsPath[project] = [];
-					}
-					componentsPath[project].push(elementSplit[1]);
-				}
-			}, this);
-		}			
-	});
 }
 
 function ReadSolutionDir(solutionDir)
