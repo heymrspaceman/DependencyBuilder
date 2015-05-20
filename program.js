@@ -22,11 +22,12 @@ var externalBelongsTo = [];
 var componentsPath = [];
 var externalComponentsPath = [];
 var project = "";
-var componentsDir = "D:\\nodejs\\DependencyBuilder\\Dependencies\\Components";
-var externalComponentsDir = "D:\\nodejs\\DependencyBuilder\\Dependencies\\Components\\external";
-var referencesDir = "D:\\nodejs\\DependencyBuilder\\Dependencies\\References";
-var scriptsDir = "D:\\nodejs\\DependencyBuilder\\Dependencies\\Generated scripts";
-var postBuildBatchFilesDir = "D:\\nodejs\\DependencyBuilder\\Dependencies\\Generated scripts\\postbuild";
+var rootDir = "D:\\nodejs\\DependencyBuilder";
+var componentsDir = path.join(rootDir, "Dependencies\\Components");
+var externalComponentsDir = path.join(rootDir, "Dependencies\\Components\\external");
+var referencesDir = path.join(rootDir, "Dependencies\\References");
+var scriptsDir = path.join(rootDir, "Dependencies\\Generated scripts");
+var postBuildBatchFilesDir = path.join(rootDir, "Dependencies\\Generated scripts\\postbuild");
 
 // TODO Delete all previous audo generated scripts
 //fs.mkdirSync(scriptsDir);
