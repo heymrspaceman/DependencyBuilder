@@ -29,15 +29,15 @@ var postBuildBatchFilesDir = path.join(rootDir, "Dependencies\\Generated scripts
 
 // TODO Delete all previous audo generated scripts
 //fs.mkdirSync(scriptsDir);
-//fs.mkdirSync(postBuildScriptsDir);
+//fs.mkdirSync(postBuildBatchFilesDir);
 
 fs.readdir(internalComponentsDir, function(err, internalFiles)
 {
-	ReadComponents(internalComponentsDir, internalFiles, internalBelongsTo, internalComponentsPath);	
+	ReadComponents(internalComponentsDir, internalFiles, ProcessInternalComponent);	
 	
 	fs.readdir(externalComponentsDir, function(err, files)
 	{
-		ReadComponents(externalComponentsDir, files, externalBelongsTo, externalComponentsPath);	
+		ReadComponents(externalComponentsDir, files, ProcessExternalComponent);	
 	});
 	
 	// Synchronous forEachs will have all finished by now	
@@ -49,7 +49,39 @@ fs.readdir(internalComponentsDir, function(err, internalFiles)
 	});
 });
 
-function ReadComponents(componentsDir, files, belongsTo, componentsPath)
+function ProcessInternalComponent(file, elementSplit)
+{
+	var project = elementSplit[0];
+	
+	internalBelongsTo[project] = file;
+	if (elementSplit.length > 1)
+	{
+		// Add this to the list of components
+		if (internalComponentsPath[project] == undefined)
+		{
+			internalComponentsPath[project] = [];
+		}
+		internalComponentsPath[project].push(elementSplit[1]);
+	}
+}
+
+function ProcessExternalComponent(file, elementSplit)
+{
+	var project = elementSplit[0];
+	
+	externalBelongsTo[project] = file;
+	if (elementSplit.length > 1)
+	{
+		// Add this to the list of components
+		if (externalComponentsPath[project] == undefined)
+		{
+			externalComponentsPath[project] = [];
+		}
+		externalComponentsPath[project].push(elementSplit[1]);
+	}
+}
+
+function ReadComponents(componentsDir, files, ProcessComponent)
 {
 	//forEach are synchronous
 	files.forEach(function(file) {
@@ -63,18 +95,7 @@ function ReadComponents(componentsDir, files, belongsTo, componentsPath)
 				// Each component is split into the project name and the actual path to the artifact
 				var elementSplit = element.trim().split(":");
 				
-				var project = elementSplit[0];
-				
-				belongsTo[project] = file;
-				if (elementSplit.length > 1)
-				{
-					// Add this to the list of components
-					if (componentsPath[project] == undefined)
-					{
-						componentsPath[project] = [];
-					}
-					componentsPath[project].push(elementSplit[1]);
-				}
+				ProcessComponent(file, elementSplit);
 			}, this);
 		}
 	}, this);
