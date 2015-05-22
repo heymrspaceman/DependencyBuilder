@@ -30,6 +30,7 @@ var postBuildBatchFilesDir = path.join(rootDir, "Dependencies\\Generated scripts
 // Constructor
 function Component(splitData) {
   
+  this.destinationFolder = "";
   if (splitData.length > 0)
   {
 	  this.id = splitData[0];
@@ -45,7 +46,12 @@ function Component(splitData) {
 		  if (splitData.length > 2)
 		  {
 			  console.log("Unexpected split length " + splitData.length + " for " + this.id);
-			  this.alternativeSource = splitData[2];
+			  this.destinationFolder = splitData[2];
+			  
+			  if (splitData.length > 3)
+			  {
+				  this.alternativeSource = splitData[3];
+			  }
 		  }
 	  }
   }  
@@ -57,6 +63,7 @@ Component.prototype.copy = function()
 	newComponent.source = this.source;
 	newComponent.sourceFilenameOnly = this.sourceFilenameOnly;
 	newComponent.alternativeSource = this.alternativeSource;
+	newComponent.destinationFolder = this.destinationFolder;
 	
 	return newComponent;
 }
@@ -73,7 +80,7 @@ Component.prototype.GenerateArtifactBatchCopy = function()
 		batchSource = batchSource.replace("Release", "%param3%");
 		
 		copy = copy + "if not exist \"%param1%\\" + batchSource + "\" (\r\n";
-		copy = copy + "\tcopy /Y \"%param1%\\dependencies_svn\\dlls\\internal\\" + this.sourceFilenameOnly + "\" \"%param2%\"\r\n";
+		copy = copy + "\tcopy /Y \"%param1%\\dependencies_svn\\dlls\\internal\\" + this.destinationFolder + this.sourceFilenameOnly + "\" \"%param2%\"\r\n";
 		copy = copy + "\tif errorlevel 1 echo \"Error in %0\" exit\r\n";
 		copy = copy + ")\r\n";
 		copy = copy + "\r\n";		
@@ -96,7 +103,7 @@ Component.prototype.GenerateArtifactInclude = function()
 		include = include + "#ifexist \"" + artifactFullPath + "\"\r\n";
 		include = include + "\tSource: \"" + artifactFullPath + "\"; DestDir: \"{app}\\{#DestSubDir}\"; Flags: ignoreversion\r\n";
 		include = include + "#else\r\n";
-		include = include + "\tSource: \"..\\dependencies_svn\\dlls\\internal\\" + this.sourceFilenameOnly + "\"; DestDir: \"{app}\\{#DestSubDir}\"; Flags: ignoreversion\r\n";
+		include = include + "\tSource: \"..\\dependencies_svn\\dlls\\internal\\" + this.destinationFolder + this.sourceFilenameOnly + "\"; DestDir: \"{app}\\{#DestSubDir}\"; Flags: ignoreversion\r\n";
 		include = include + "#endif\r\n";
 	}
 				
@@ -114,7 +121,13 @@ Component.prototype.GenerateArtifactInclude = function()
 // At the moment this only handles one file per external
 Component.prototype.GenerateExternalIssCopy = function()
 {
-	return "Source: \"..\\Dependencies_svn\\dlls\\external\\" + this.source + "\"; DestDir: \"{app}\\{#DestSubDir}\"; Flags: ignoreversion\r\n";
+	var destinationFolder = "";
+	if (this.destinationFolder.length > 0)
+	{
+		destinationFolder = "\\" + this.destinationFolder;
+	}
+	
+	return "Source: \"..\\Dependencies_svn\\dlls\\external\\" + this.source + "\"; DestDir: \"{app}\\{#DestSubDir}" + destinationFolder + "\"; Flags: ignoreversion\r\n";
 }
 
 // class methods
