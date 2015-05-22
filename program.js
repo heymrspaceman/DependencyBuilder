@@ -27,10 +27,38 @@ var referencesDir = path.join(rootDir, "Dependencies\\References");
 var scriptsDir = path.join(rootDir, "Dependencies\\Generated scripts");
 var postBuildBatchFilesDir = path.join(rootDir, "Dependencies\\Generated scripts\\postbuild");
 
+// Constructor
+function Component(splitData) {
+  // always initialize all instance properties
+  //this.bar = bar;
+  //this.baz = 'baz'; // default value
+  
+  if (splitData.length > 0)
+  {
+	  this.id = splitData[0];
+	  if (splitData.length > 1)
+	  {
+		  this.source = splitData[1];
+		  if (splitData.length > 2)
+		  {
+			  console.log("Unexpected split length " + splitData.length + " for " + this.id);
+			  this.alternativeSource = splitData[2];
+		  }
+	  }
+  }  
+}
+// class methods
+Component.prototype.fooBar = function() {
+
+};
+// export the class
+module.exports = Component;
+
 // TODO Delete all previous audo generated scripts
 //fs.mkdirSync(scriptsDir);
 //fs.mkdirSync(postBuildBatchFilesDir);
-
+// constructor call
+var object = new Component('Hello');
 fs.readdir(internalComponentsDir, function(err, internalFiles)
 {
 	ReadComponents(internalComponentsDir, internalFiles, ProcessInternalComponent);	
@@ -52,6 +80,7 @@ fs.readdir(internalComponentsDir, function(err, internalFiles)
 function ProcessInternalComponent(file, elementSplit)
 {
 	var project = elementSplit[0];
+	var internalComponent = new Component(elementSplit);
 	
 	internalBelongsTo[project] = file;
 	if (elementSplit.length > 1)
@@ -61,13 +90,14 @@ function ProcessInternalComponent(file, elementSplit)
 		{
 			internalComponentsPath[project] = [];
 		}
-		internalComponentsPath[project].push(elementSplit[1]);
+		internalComponentsPath[project].push(internalComponent);
 	}
 }
 
 function ProcessExternalComponent(file, elementSplit)
 {
 	var project = elementSplit[0];
+	var externalComponent = new Component(elementSplit);
 	
 	externalBelongsTo[project] = file;
 	if (elementSplit.length > 1)
@@ -77,7 +107,7 @@ function ProcessExternalComponent(file, elementSplit)
 		{
 			externalComponentsPath[project] = [];
 		}
-		externalComponentsPath[project].push(elementSplit[1]);
+		externalComponentsPath[project].push(externalComponent);
 	}
 }
 
@@ -153,7 +183,7 @@ function GetArtifact(component)
 {
 	if (internalComponentsPath[component] !== undefined)
 	{
-		return internalComponentsPath[component][0];
+		return internalComponentsPath[component][0].source;
 	}
 	
 	return undefined;
@@ -197,7 +227,7 @@ function GenerateExternalIssCopy(dep, files)
 {
 	var issCopy = "\r\n;" + dep + "\r\n";
 	files.forEach(function(file) {
-		issCopy = issCopy + "Source: \"..\\Dependencies_svn\\dlls\\external\\" + file + "\"; DestDir: \"{app}\\{#DestSubDir}\"; Flags: ignoreversion\r\n";
+		issCopy = issCopy + "Source: \"..\\Dependencies_svn\\dlls\\external\\" + file.source + "\"; DestDir: \"{app}\\{#DestSubDir}\"; Flags: ignoreversion\r\n";
 	}, this);
 	return issCopy;
 }
