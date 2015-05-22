@@ -111,6 +111,12 @@ Component.prototype.GenerateArtifactInclude = function()
 	return include;
 }
 
+// At the moment this only handles one file per external
+Component.prototype.GenerateExternalIssCopy = function()
+{
+	return "Source: \"..\\Dependencies_svn\\dlls\\external\\" + this.source + "\"; DestDir: \"{app}\\{#DestSubDir}\"; Flags: ignoreversion\r\n";
+}
+
 // class methods
 Component.prototype.fooBar = function() {
 
@@ -270,21 +276,18 @@ function CreateIssDependencyScript(component, internalDepencencies, externalDepe
 	if (externalDependencies.length > 0) {
 		fileContents = fileContents + "\r\n;External";
 		externalDependencies.forEach(function(dep) {
-			fileContents = fileContents + GenerateExternalIssCopy(dep, externalComponentsPath[dep]);
+			var externalComponents = externalComponentsPath[dep];
+			if (externalComponents !== undefined)
+			{
+				fileContents = fileContents + "\r\n;" + dep + "\r\n";
+				externalComponents.forEach(function(externalComponent) {
+					fileContents = fileContents + externalComponent.GenerateExternalIssCopy();
+				}, this);
+			}
 		}, this);
 	}
 	
 	fs.writeFile(filename, fileContents);
-}
-
-// At the moment this only handles one file per external
-function GenerateExternalIssCopy(dep, files)
-{
-	var issCopy = "\r\n;" + dep + "\r\n";
-	files.forEach(function(file) {
-		issCopy = issCopy + "Source: \"..\\Dependencies_svn\\dlls\\external\\" + file.source + "\"; DestDir: \"{app}\\{#DestSubDir}\"; Flags: ignoreversion\r\n";
-	}, this);
-	return issCopy;
 }
 
 function CreatePostBuildBatchFile(component, dependencies)
