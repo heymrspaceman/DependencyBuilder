@@ -79,6 +79,39 @@ Component.prototype.GenerateArtifactBatchCopy = function()
 	
 	return copy;
 }
+
+// TODO refactor this with GenerateArtifactBatchCopy
+Component.prototype.GenerateArtifactInclude = function(artifactFullPath)
+{
+	var include = "";
+
+	if (artifactFullPath !== undefined)
+	{	
+		// Extract the filename from the full artifact path, note the file may not exist at this point in time
+		// so we cannot use fs.stat
+		var artifactSplit = artifactFullPath.split("\\");	
+		var artifactFilename = artifactSplit[artifactSplit.length - 1];
+		
+		// artifactFaullPath is from the root folder of the project, however this is run from within the Setups folder
+		// so add a ..\
+		artifactFullPath = "..\\" + artifactFullPath;
+		include = include + "#ifexist \"" + artifactFullPath + "\"\r\n";
+		include = include + "\tSource: \"" + artifactFullPath + "\"; DestDir: \"{app}\\{#DestSubDir}\"; Flags: ignoreversion\r\n";
+		include = include + "#else\r\n";
+		include = include + "\tSource: \"..\\dependencies_svn\\dlls\\internal\\" + artifactFilename + "\"; DestDir: \"{app}\\{#DestSubDir}\"; Flags: ignoreversion\r\n";
+		include = include + "#endif\r\n";
+	}
+				
+	// If there is a .exe present, then get the .exe.config also
+	// TODO make better so we don't need to pass in the source as parameter
+	if ((path.extname(artifactFullPath)) == ".exe")
+	{
+		include = include + "\r\n" + this.GenerateArtifactInclude(this.source + ".config");
+	}
+	
+	return include;
+}
+
 // class methods
 Component.prototype.fooBar = function() {
 
@@ -211,25 +244,6 @@ function ReadProjectDir(projectFile, bottomDir)
 	CreatePostBuildBatchFile(component, references);
 }
 
-function GetArtifact(component)
-{
-	if (internalComponentsPath[component] !== undefined)
-	{
-		return internalComponentsPath[component][0].source;
-	}
-	
-	return undefined;
-}
-
-function GetArtifact2(component)
-{
-	if (internalComponentsPath[component] !== undefined)
-	{
-		return internalComponentsPath[component];
-	}
-	
-	return undefined;
-}
 
 function CreateIssDependencyScript(component, internalDepencencies, externalDependencies)
 {
@@ -238,17 +252,18 @@ function CreateIssDependencyScript(component, internalDepencencies, externalDepe
 	filename = path.join(scriptsDir, filename);
 	
 	// Build artifacts
-	var artifact = GetArtifact(component);
-	
-	var artifactsIncludes = GenerateArtifactInclude(artifact);
-	
-	// If there is a .exe present, then get the .exe.config also
-	if ((path.extname(artifact)) == ".exe")
+	var fetchedComponents = internalComponentsPath[component];
+		
+	if (fetchedComponents !== undefined)
 	{
-		artifactsIncludes = artifactsIncludes + "\r\n" + GenerateArtifactInclude(artifact + ".config");
+		fetchedComponents.forEach(function(fetchedComponent) {
+			fileContents = fileContents + fetchedComponent.GenerateArtifactInclude(fetchedComponent.source) + "\r\n";
+		}, this);
 	}
-	// Add artifacts here
-	fileContents = fileContents + artifactsIncludes + "\r\n";
+	else
+	{
+		fileContents = fileContents + "\r\n";
+	}
 		
 	internalDepencencies.forEach(function(dep) {
 		fileContents = fileContents + "#include \"" + dep + "_dependencies.iss\"\r\n";
@@ -274,31 +289,6 @@ function GenerateExternalIssCopy(dep, files)
 	return issCopy;
 }
 
-// TODO refactor this with GenerateArtifactBatchCopy
-function GenerateArtifactInclude(artifactFullPath)
-{
-	var include = "";
-
-	if (artifactFullPath !== undefined)
-	{	
-		// Extract the filename from the full artifact path, note the file may not exist at this point in time
-		// so we cannot use fs.stat
-		var artifactSplit = artifactFullPath.split("\\");	
-		var artifactFilename = artifactSplit[artifactSplit.length - 1];
-		
-		// artifactFaullPath is from the root folder of the project, however this is run from within the Setups folder
-		// so add a ..\
-		artifactFullPath = "..\\" + artifactFullPath;
-		include = include + "#ifexist \"" + artifactFullPath + "\"\r\n";
-		include = include + "\tSource: \"" + artifactFullPath + "\"; DestDir: \"{app}\\{#DestSubDir}\"; Flags: ignoreversion\r\n";
-		include = include + "#else\r\n";
-		include = include + "\tSource: \"..\\dependencies_svn\\dlls\\internal\\" + artifactFilename + "\"; DestDir: \"{app}\\{#DestSubDir}\"; Flags: ignoreversion\r\n";
-		include = include + "#endif\r\n";
-	}
-	
-	return include;
-}
-
 function CreatePostBuildBatchFile(component, dependencies)
 {
 	var filename = "CopyDependenciesInternal" + component +  ".bat";
@@ -312,7 +302,7 @@ function CreatePostBuildBatchFile(component, dependencies)
 	fileContents = fileContents + "REM echo \"*** Parameter 2 removed quotes: (%param2%)\"\r\n";
 	fileContents = fileContents + "\r\n";
 	//fileContents = fileContents + GenerateArtifactBatchCopy(GetArtifact(component));
-	var fetchedComponents = GetArtifact2(component);
+	var fetchedComponents = internalComponentsPath[component];
 	if (fetchedComponents !== undefined)
 	{
 		fetchedComponents.forEach(function(fetchedComponent) {
