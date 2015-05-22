@@ -29,9 +29,6 @@ var postBuildBatchFilesDir = path.join(rootDir, "Dependencies\\Generated scripts
 
 // Constructor
 function Component(splitData) {
-  // always initialize all instance properties
-  //this.bar = bar;
-  //this.baz = 'baz'; // default value
   
   if (splitData.length > 0)
   {
@@ -93,7 +90,7 @@ Component.prototype.GenerateArtifactInclude = function()
 
 	if (artifactFullPath !== undefined)
 	{			
-		// artifactFaullPath is from the root folder of the project, however this is run from within the Setups folder
+		// artifactFullPath is from the root folder of the project, however this is run from within the Setups folder
 		// so add a ..\
 		artifactFullPath = "..\\" + artifactFullPath;
 		include = include + "#ifexist \"" + artifactFullPath + "\"\r\n";
@@ -124,8 +121,7 @@ module.exports = Component;
 // TODO Delete all previous audo generated scripts
 //fs.mkdirSync(scriptsDir);
 //fs.mkdirSync(postBuildBatchFilesDir);
-// constructor call
-var object = new Component('Hello');
+
 fs.readdir(internalComponentsDir, function(err, internalFiles)
 {
 	ReadComponents(internalComponentsDir, internalFiles, ProcessInternalComponent);	
