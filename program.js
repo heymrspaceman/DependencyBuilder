@@ -54,9 +54,14 @@ function Component(splitData) {
   }  
 }
 
-Component.prototype.test = function()
+Component.prototype.copy = function()
 {
-	console.log("------------------------");
+	var newComponent = new Component("");
+	newComponent.source = this.source;
+	newComponent.sourceFilenameOnly = this.sourceFilenameOnly;
+	newComponent.alternativeSource = this.alternativeSource;
+	
+	return newComponent;
 }
 
 // TODO refactor this with GenerateArtifactInclude
@@ -81,32 +86,29 @@ Component.prototype.GenerateArtifactBatchCopy = function()
 }
 
 // TODO refactor this with GenerateArtifactBatchCopy
-Component.prototype.GenerateArtifactInclude = function(artifactFullPath)
+Component.prototype.GenerateArtifactInclude = function()
 {
 	var include = "";
+	var artifactFullPath = this.source;
 
 	if (artifactFullPath !== undefined)
-	{	
-		// Extract the filename from the full artifact path, note the file may not exist at this point in time
-		// so we cannot use fs.stat
-		var artifactSplit = artifactFullPath.split("\\");	
-		var artifactFilename = artifactSplit[artifactSplit.length - 1];
-		
+	{			
 		// artifactFaullPath is from the root folder of the project, however this is run from within the Setups folder
 		// so add a ..\
 		artifactFullPath = "..\\" + artifactFullPath;
 		include = include + "#ifexist \"" + artifactFullPath + "\"\r\n";
 		include = include + "\tSource: \"" + artifactFullPath + "\"; DestDir: \"{app}\\{#DestSubDir}\"; Flags: ignoreversion\r\n";
 		include = include + "#else\r\n";
-		include = include + "\tSource: \"..\\dependencies_svn\\dlls\\internal\\" + artifactFilename + "\"; DestDir: \"{app}\\{#DestSubDir}\"; Flags: ignoreversion\r\n";
+		include = include + "\tSource: \"..\\dependencies_svn\\dlls\\internal\\" + this.sourceFilenameOnly + "\"; DestDir: \"{app}\\{#DestSubDir}\"; Flags: ignoreversion\r\n";
 		include = include + "#endif\r\n";
 	}
 				
-	// If there is a .exe present, then get the .exe.config also
-	// TODO make better so we don't need to pass in the source as parameter
 	if ((path.extname(artifactFullPath)) == ".exe")
 	{
-		include = include + "\r\n" + this.GenerateArtifactInclude(this.source + ".config");
+		var configComponent = this.copy();
+		configComponent.source = configComponent.source + ".config";
+		configComponent.sourceFilenameOnly = configComponent.sourceFilenameOnly + ".config";
+		include = include + "\r\n" + configComponent.GenerateArtifactInclude();
 	}
 	
 	return include;
@@ -301,7 +303,7 @@ function CreatePostBuildBatchFile(component, dependencies)
 	fileContents = fileContents + "REM echo \"*** Parameter 1 removed quotes: (%param1%)\"\r\n";
 	fileContents = fileContents + "REM echo \"*** Parameter 2 removed quotes: (%param2%)\"\r\n";
 	fileContents = fileContents + "\r\n";
-	//fileContents = fileContents + GenerateArtifactBatchCopy(GetArtifact(component));
+	
 	var fetchedComponents = internalComponentsPath[component];
 	if (fetchedComponents !== undefined)
 	{
