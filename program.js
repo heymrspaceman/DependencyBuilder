@@ -39,6 +39,12 @@ function Component(splitData) {
 	  if (splitData.length > 1)
 	  {
 		  this.source = splitData[1];
+		  		  
+		  // Extract the filename from the full artifact path, note the file may not exist at this point in time
+		  // so we cannot use fs.stat
+		  var sourceSplit = this.source.split("\\");	
+		  this.sourceFilenameOnly = sourceSplit[sourceSplit.length - 1];
+		  
 		  if (splitData.length > 2)
 		  {
 			  console.log("Unexpected split length " + splitData.length + " for " + this.id);
@@ -46,6 +52,32 @@ function Component(splitData) {
 		  }
 	  }
   }  
+}
+
+Component.prototype.test = function()
+{
+	console.log("------------------------");
+}
+
+// TODO refactor this with GenerateArtifactInclude
+Component.prototype.GenerateArtifactBatchCopy = function()
+{
+	var copy = "";
+	var batchSource = this.source;
+
+	if (batchSource !== undefined)
+	{	
+		// Replace any exlpicit Release directory with param3
+		batchSource = batchSource.replace("Release", "%param3%");
+		
+		copy = copy + "if not exist \"%param1%\\" + batchSource + "\" (\r\n";
+		copy = copy + "\tcopy /Y \"%param1%\\dependencies_svn\\dlls\\internal\\" + this.sourceFilenameOnly + "\" \"%param2%\"\r\n";
+		copy = copy + "\tif errorlevel 1 echo \"Error in %0\" exit\r\n";
+		copy = copy + ")\r\n";
+		copy = copy + "\r\n";		
+	}
+	
+	return copy;
 }
 // class methods
 Component.prototype.fooBar = function() {
@@ -189,6 +221,16 @@ function GetArtifact(component)
 	return undefined;
 }
 
+function GetArtifact2(component)
+{
+	if (internalComponentsPath[component] !== undefined)
+	{
+		return internalComponentsPath[component];
+	}
+	
+	return undefined;
+}
+
 function CreateIssDependencyScript(component, internalDepencencies, externalDependencies)
 {
 	var filename = component + "_dependencies.iss";
@@ -259,7 +301,6 @@ function GenerateArtifactInclude(artifactFullPath)
 
 function CreatePostBuildBatchFile(component, dependencies)
 {
-	var artifact = GetArtifact(component);
 	var filename = "CopyDependenciesInternal" + component +  ".bat";
 	
 	var fileContents = "@echo off\r\n";
@@ -270,7 +311,14 @@ function CreatePostBuildBatchFile(component, dependencies)
 	fileContents = fileContents + "REM echo \"*** Parameter 1 removed quotes: (%param1%)\"\r\n";
 	fileContents = fileContents + "REM echo \"*** Parameter 2 removed quotes: (%param2%)\"\r\n";
 	fileContents = fileContents + "\r\n";
-	fileContents = fileContents + GenerateArtifactBatchCopy(artifact);
+	//fileContents = fileContents + GenerateArtifactBatchCopy(GetArtifact(component));
+	var fetchedComponents = GetArtifact2(component);
+	if (fetchedComponents !== undefined)
+	{
+		fetchedComponents.forEach(function(fetchedComponent) {
+			fileContents = fileContents + fetchedComponent.GenerateArtifactBatchCopy();
+		}, this);
+	}
 		
 	dependencies.forEach(function(dep) {
 		fileContents = fileContents + "Call \"%param1%\\dependencies_svn\\scripts\\postbuild\\CopyDependenciesInternal";
@@ -281,28 +329,4 @@ function CreatePostBuildBatchFile(component, dependencies)
 	filename = path.join(postBuildBatchFilesDir, filename);
 	
 	fs.writeFile(filename, fileContents);
-}
-
-// TODO refactor this with GenerateArtifactInclude
-function GenerateArtifactBatchCopy(artifactFullPath)
-{
-	var copy = "";
-
-	if (artifactFullPath !== undefined)
-	{	
-		// Extract the filename from the full artifact path, note the file may not exist at this point in time
-		// so we cannot use fs.stat
-		var artifactSplit = artifactFullPath.split("\\");	
-		var artifactFilename = artifactSplit[artifactSplit.length - 1];
-		// Replace any exlpicit Release directory with param3
-		artifactFullPath = artifactFullPath.replace("Release", "%param3%");
-		
-		copy = copy + "if not exist \"%param1%\\" + artifactFullPath + "\" (\r\n";
-		copy = copy + "\tcopy /Y \"%param1%\\dependencies_svn\\dlls\\internal\\" + artifactFilename + "\" \"%param2%\"\r\n";
-		copy = copy + "\tif errorlevel 1 echo \"Error in %0\" exit\r\n";
-		copy = copy + ")\r\n";
-		copy = copy + "\r\n";		
-	}
-	
-	return copy;
 }
