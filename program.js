@@ -27,7 +27,23 @@ var referencesDir = path.join(rootDir, "Dependencies\\References");
 var scriptsDir = path.join(rootDir, "Dependencies\\Generated scripts");
 var postBuildBatchFilesDir = path.join(rootDir, "Dependencies\\Generated scripts\\postbuild");
 
-// Constructor
+// Component Constructor
+function Reference(element) {
+	this.id = element.trim();
+}
+
+Reference.prototype.copy = function()
+{
+	var newReference = new Reference("");
+	newReference.id = this.id;
+	
+	return newReference;
+}
+
+// export the class
+module.exports = Reference;
+
+// Component Constructor
 function Component(splitData) {
   
   this.destinationFolder = "";
@@ -285,8 +301,8 @@ function ReadProjectDir(projectFile, bottomDir)
 	var references = [];		
 	var externalReferences = [];			
 	referenceFileContents.split(',').forEach(function(element) {
-		reference = element.trim();
-		if (internalBelongsTo[reference] !== undefined)
+		reference = new Reference(element);
+		if (internalBelongsTo[reference.id] !== undefined)
 		{
 			// This belongsTo can be used for CruiseControl
 			//console.log("[" + belongsTo[reference]  +"] " + reference);
@@ -295,13 +311,13 @@ function ReadProjectDir(projectFile, bottomDir)
 		else
 		{
 			// Check external refernces
-			if (externalBelongsTo[reference] !== undefined)
+			if (externalBelongsTo[reference.id] !== undefined)
 			{
 				externalReferences.push(reference);
 			}
 			else
 			{
-				console.log("reference not found: " + reference);
+				console.log("reference not found: " + reference.id);
 			}
 		}
 	}, this);
@@ -331,17 +347,17 @@ function CreateIssDependencyScript(component, internalDepencencies, externalDepe
 		fileContents = fileContents + "\r\n";
 	}
 		
-	internalDepencencies.forEach(function(dep) {
-		fileContents = fileContents + "#include \"" + dep + "_dependencies.iss\"\r\n";
+	internalDepencencies.forEach(function(ref) {
+		fileContents = fileContents + "#include \"" + ref.id + "_dependencies.iss\"\r\n";
 	}, this);
 		
 	if (externalDependencies.length > 0) {
 		fileContents = fileContents + "\r\n;External";
-		externalDependencies.forEach(function(dep) {
-			var externalComponents = externalComponentsPath[dep];
+		externalDependencies.forEach(function(ref) {
+			var externalComponents = externalComponentsPath[ref.id];
 			if (externalComponents !== undefined)
 			{
-				fileContents = fileContents + "\r\n;" + dep + "\r\n";
+				fileContents = fileContents + "\r\n;" + ref.id + "\r\n";
 				externalComponents.forEach(function(externalComponent) {
 					fileContents = fileContents + externalComponent.GenerateExternalIssCopy();
 				}, this);
@@ -373,9 +389,9 @@ function CreatePostBuildBatchFile(component, dependencies)
 		}, this);
 	}
 		
-	dependencies.forEach(function(dep) {
+	dependencies.forEach(function(ref) {
 		fileContents = fileContents + "Call \"%param1%\\dependencies_svn\\scripts\\postbuild\\CopyDependenciesInternal";
-		fileContents = fileContents + dep + ".bat\" \"%param1%\" \"%param2%\" \"%param3%\"\r\n";
+		fileContents = fileContents + ref.id + ".bat\" \"%param1%\" \"%param2%\" \"%param3%\"\r\n";
 		fileContents = fileContents + "if errorlevel 1 echo \"Error in %0\" exit\r\n";
 	}, this);
 		
