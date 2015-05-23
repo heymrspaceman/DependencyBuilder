@@ -29,7 +29,18 @@ var postBuildBatchFilesDir = path.join(rootDir, "Dependencies\\Generated scripts
 
 // Component Constructor
 function Reference(element) {
-	this.id = element.trim();
+	
+	var elementSplit = element.split(":");
+	this.id = elementSplit[0].trim();
+	
+	if (elementSplit.length > 1)
+	{
+		this.referenced = false;		
+	}
+	else
+	{		
+		this.referenced = true;
+	}
 }
 
 Reference.prototype.copy = function()
@@ -299,14 +310,22 @@ function ReadProjectDir(projectFile, bottomDir)
 	var referenceFileContents = fs.readFileSync(projectFile, 'UTF-8');
 	var reference = "";
 	var references = [];		
-	var externalReferences = [];			
+	var externalReferences = [];
+	var internalExtraReferences = [];			
 	referenceFileContents.split(',').forEach(function(element) {
 		reference = new Reference(element);
 		if (internalBelongsTo[reference.id] !== undefined)
 		{
 			// This belongsTo can be used for CruiseControl
 			//console.log("[" + belongsTo[reference]  +"] " + reference);
-			references.push(reference);
+			if (reference.referenced)
+			{
+				references.push(reference);
+			}
+			else
+			{
+				internalExtraReferences.push(reference);
+			}
 		}
 		else
 		{
@@ -322,12 +341,12 @@ function ReadProjectDir(projectFile, bottomDir)
 		}
 	}, this);
 		
-	CreateIssDependencyScript(component, references, externalReferences);
-	CreatePostBuildBatchFile(component, references);
+	CreateIssDependencyScript(component, references, internalExtraReferences, externalReferences);
+	CreatePostBuildBatchFile(component, references, internalExtraReferences);
 }
 
 
-function CreateIssDependencyScript(component, internalDepencencies, externalDependencies)
+function CreateIssDependencyScript(component, internalDepencencies, internalExtraDependencies, externalDependencies)
 {
 	var filename = component + "_dependencies.iss";
 	var fileContents = "[Files]\r\n;Internal\r\n";
@@ -351,6 +370,13 @@ function CreateIssDependencyScript(component, internalDepencencies, externalDepe
 		fileContents = fileContents + "#include \"" + ref.id + "_dependencies.iss\"\r\n";
 	}, this);
 		
+	if (internalExtraDependencies.length > 0) {
+		fileContents = fileContents + "\r\n;Internal but not referenced in Visual Studio\r\n";
+		internalExtraDependencies.forEach(function(extraRef) {
+			fileContents = fileContents + "#include \"" + extraRef.id + "_dependencies.iss\"\r\n";			
+		}, this);
+	}
+		
 	if (externalDependencies.length > 0) {
 		fileContents = fileContents + "\r\n;External";
 		externalDependencies.forEach(function(ref) {
@@ -368,7 +394,7 @@ function CreateIssDependencyScript(component, internalDepencencies, externalDepe
 	fs.writeFile(filename, fileContents);
 }
 
-function CreatePostBuildBatchFile(component, dependencies)
+function CreatePostBuildBatchFile(component, dependencies, internalExtraDependencies)
 {
 	var filename = "CopyDependenciesInternal" + component +  ".bat";
 	
@@ -394,6 +420,16 @@ function CreatePostBuildBatchFile(component, dependencies)
 		fileContents = fileContents + ref.id + ".bat\" \"%param1%\" \"%param2%\" \"%param3%\"\r\n";
 		fileContents = fileContents + "if errorlevel 1 echo \"Error in %0\" exit\r\n";
 	}, this);
+	
+	if (internalExtraDependencies.length > 0)
+	{
+		fileContents = fileContents + "\r\nREM Internal but not referenced in Visual Studio\r\n";
+		internalExtraDependencies.forEach(function(ref) {
+			fileContents = fileContents + "Call \"%param1%\\dependencies_svn\\scripts\\postbuild\\CopyDependenciesInternal";
+			fileContents = fileContents + ref.id + ".bat\" \"%param1%\" \"%param2%\" \"%param3%\"\r\n";
+			fileContents = fileContents + "if errorlevel 1 echo \"Error in %0\" exit\r\n";
+		}, this);
+	}
 		
 	filename = path.join(postBuildBatchFilesDir, filename);
 	
