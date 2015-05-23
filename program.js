@@ -35,8 +35,19 @@ function Component(splitData) {
   {
 	  this.id = splitData[0];
 	  if (splitData.length > 1)
-	  {
-		  this.source = splitData[1];
+	  { 
+		  var source = splitData[1];
+		  if (source.indexOf("\\\\") > 0)
+		  {
+		  	console.log("-----" + source);
+			  source = source.replace("\\\\",":\\");
+			  this.fullPath = true;
+		  }
+		  else
+		  {				  	
+			  this.fullPath = false;
+		  }
+		  this.source = source;
 		  		  
 		  // Extract the filename from the full artifact path, note the file may not exist at this point in time
 		  // so we cannot use fs.stat
@@ -49,8 +60,16 @@ function Component(splitData) {
 			  this.destinationFolder = splitData[2];
 			  
 			  if (splitData.length > 3)
-			  {
-				  this.alternativeSource = splitData[3];
+			  {				 
+				  this.alternativeSource = splitData[3].replace("\\\\",":\\");;
+				  if (splitData.length > 4)
+				  {				 
+					  this.register = true;
+				  }
+				  else
+				  {
+				  	this.register = false;
+				  }
 			  }
 		  }
 	  }
@@ -127,7 +146,37 @@ Component.prototype.GenerateExternalIssCopy = function()
 		destinationFolder = "\\" + this.destinationFolder;
 	}
 	
-	return "Source: \"..\\Dependencies_svn\\dlls\\external\\" + this.source + "\"; DestDir: \"{app}\\{#DestSubDir}" + destinationFolder + "\"; Flags: ignoreversion\r\n";
+	var sourcePath = "\"..\\Dependencies_svn\\dlls\\external\\" + this.source;
+	if (this.fullPath)
+	{
+		sourcePath = "\"" + this.source;
+	}
+	
+	var register = "";
+	if (this.register)
+	{
+		register = " regserver 32bit";
+	}
+	
+	if (this.alternativeSource !== undefined)
+	{
+		if (this.alternativeSource.length > 0)
+		{
+			var include = "";
+		// artifactFullPath is from the root folder of the project, however this is run from within the Setups folder
+		// so add a ..\
+			var altSourcePath = "..\\" + this.alternativeSource;
+			include = include + "#ifexist \"" + altSourcePath + "\"\r\n";
+			include = include + "\tSource: \"" + altSourcePath + "\"; DestDir: \"{app}\\{#DestSubDir}\"; Flags: ignoreversion\r\n";
+			include = include + "#else\r\n";
+			include = include + "\tSource: " + sourcePath + "\"; DestDir: \"{app}\\{#DestSubDir}" + destinationFolder + "\"; Flags: ignoreversion\r\n";
+			include = include + "#endif\r\n";
+			
+			return include;
+		}
+	}
+	
+	return "Source: " + sourcePath + "\"; DestDir: \"{app}\\{#DestSubDir}" + destinationFolder + "\"; Flags: ignoreversion" + register + "\r\n";
 }
 
 // class methods
