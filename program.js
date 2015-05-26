@@ -61,6 +61,7 @@ function Component(splitData) {
   this.register = false;
   this.sourceOnly = false;
   this.noConfig = false;
+  this.original = false;
   
   if (splitData.length > 0)
   {
@@ -107,8 +108,15 @@ function Component(splitData) {
 						  {
 							  if (splitData[6] == "noConfig")
 							  {
-						  console.log("noConfig " + this.id + "-" + splitData[6]);
 								  this.noConfig = true;
+							  }
+							  
+							  if (splitData.length > 7)
+							  {
+								  if (splitData[7] == "original")
+								  {
+									  this.original = true;
+								  }
 							  }
 						  }
 					  }	
@@ -128,6 +136,8 @@ Component.prototype.copy = function()
 	newComponent.destinationFolder = this.destinationFolder;
 	newComponent.register = this.register;
 	newComponent.sourceOnly = this.sourceOnly;
+	newComponent.noConfig = this.noConfig;
+	newComponent.original = this.original;
 	
 	return newComponent;
 }
@@ -387,7 +397,7 @@ function CreateIssDependencyScript(component, internalDepencencies, internalExtr
 {
 	var filename = component + "_dependencies.iss";
 	var fileContents = "[Files]\r\n;Internal\r\n";
-	filename = path.join(scriptsDir, filename);
+	var originalScript = false;
 	
 	// Build artifacts
 	var fetchedComponents = internalComponentsPath[component];
@@ -395,6 +405,7 @@ function CreateIssDependencyScript(component, internalDepencencies, internalExtr
 	if (fetchedComponents !== undefined)
 	{
 		fetchedComponents.forEach(function(fetchedComponent) {
+			originalScript = originalScript || fetchedComponent.original;
 			fileContents = fileContents + fetchedComponent.GenerateArtifactInclude(fetchedComponent.source) + "\r\n";
 		}, this);
 	}
@@ -402,38 +413,55 @@ function CreateIssDependencyScript(component, internalDepencencies, internalExtr
 	{
 		fileContents = fileContents + "\r\n";
 	}
-		
-	internalDepencencies.forEach(function(ref) {
-		fileContents = fileContents + "#include \"" + ref.id + "_dependencies.iss\"\r\n";
-	}, this);
-		
-	if (internalExtraDependencies.length > 0) {
-		fileContents = fileContents + "\r\n;Internal but not referenced in Visual Studio\r\n";
-		internalExtraDependencies.forEach(function(extraRef) {
-			fileContents = fileContents + "#include \"" + extraRef.id + "_dependencies.iss\"\r\n";			
-		}, this);
-	}
-		
-	if (externalDependencies.length > 0) {
-		fileContents = fileContents + "\r\n;External";
-		externalDependencies.forEach(function(ref) {
-			var externalComponents = externalComponentsPath[ref.id];
-			if (externalComponents !== undefined)
-			{
-				fileContents = fileContents + "\r\n;" + ref.id + "\r\n";
-				externalComponents.forEach(function(externalComponent) {
-					fileContents = fileContents + externalComponent.GenerateExternalIssCopy();
-				}, this);
-			}
-		}, this);
-	}
 	
-	fs.writeFile(filename, fileContents);
+	if (!originalScript)
+	{			
+		internalDepencencies.forEach(function(ref) {
+			fileContents = fileContents + "#include \"" + ref.id + "_dependencies.iss\"\r\n";
+		}, this);
+			
+		if (internalExtraDependencies.length > 0) {
+			fileContents = fileContents + "\r\n;Internal but not referenced in Visual Studio\r\n";
+			internalExtraDependencies.forEach(function(extraRef) {			
+				var internalComponents = internalComponentsPath[extraRef.id];
+				var scriptFolder = "";
+				if (internalComponents !== undefined)
+				{
+					internalComponents.forEach(function(internalComponent) {
+						if (internalComponent.original)
+						{
+							scriptFolder = "originals\\";
+						}
+					}, this);
+				}
+				
+				fileContents = fileContents + "#include \"" + scriptFolder + extraRef.id + "_dependencies.iss\"\r\n";			
+			}, this);
+		}
+			
+		if (externalDependencies.length > 0) {
+			fileContents = fileContents + "\r\n;External";
+			externalDependencies.forEach(function(ref) {
+				var externalComponents = externalComponentsPath[ref.id];
+				if (externalComponents !== undefined)
+				{
+					fileContents = fileContents + "\r\n;" + ref.id + "\r\n";
+					externalComponents.forEach(function(externalComponent) {
+						fileContents = fileContents + externalComponent.GenerateExternalIssCopy();
+					}, this);
+				}
+			}, this);
+		}
+		
+		filename = path.join(scriptsDir, filename);
+		fs.writeFile(filename, fileContents);
+	}
 }
 
 function CreatePostBuildBatchFile(component, dependencies, internalExtraDependencies)
 {
 	var filename = "CopyDependenciesInternal" + component +  ".bat";
+	var originalBatchFile = false;
 	
 	var fileContents = "@echo off\r\n";
 	fileContents = fileContents + "REM 2 parameters are passed in wrapped in quotes, but this causes problems when using them but putting them in variables solves it\r\n";
@@ -448,27 +476,30 @@ function CreatePostBuildBatchFile(component, dependencies, internalExtraDependen
 	if (fetchedComponents !== undefined)
 	{
 		fetchedComponents.forEach(function(fetchedComponent) {
+			originalBatchFile = originalBatchFile || fetchedComponent.original;
 			fileContents = fileContents + fetchedComponent.GenerateArtifactBatchCopy();
 		}, this);
 	}
 		
-	dependencies.forEach(function(ref) {
-		fileContents = fileContents + "Call \"%param1%\\dependencies_svn\\scripts\\postbuild\\CopyDependenciesInternal";
-		fileContents = fileContents + ref.id + ".bat\" \"%param1%\" \"%param2%\" \"%param3%\"\r\n";
-		fileContents = fileContents + "if errorlevel 1 echo \"Error in %0\" exit\r\n";
-	}, this);
-	
-	if (internalExtraDependencies.length > 0)
+	if (!originalBatchFile)
 	{
-		fileContents = fileContents + "\r\nREM Internal but not referenced in Visual Studio\r\n";
-		internalExtraDependencies.forEach(function(ref) {
+		dependencies.forEach(function(ref) {
 			fileContents = fileContents + "Call \"%param1%\\dependencies_svn\\scripts\\postbuild\\CopyDependenciesInternal";
 			fileContents = fileContents + ref.id + ".bat\" \"%param1%\" \"%param2%\" \"%param3%\"\r\n";
 			fileContents = fileContents + "if errorlevel 1 echo \"Error in %0\" exit\r\n";
 		}, this);
-	}
 		
-	filename = path.join(postBuildBatchFilesDir, filename);
-	
-	fs.writeFile(filename, fileContents);
+		if (internalExtraDependencies.length > 0)
+		{
+			fileContents = fileContents + "\r\nREM Internal but not referenced in Visual Studio\r\n";
+			internalExtraDependencies.forEach(function(ref) {
+				fileContents = fileContents + "Call \"%param1%\\dependencies_svn\\scripts\\postbuild\\CopyDependenciesInternal";
+				fileContents = fileContents + ref.id + ".bat\" \"%param1%\" \"%param2%\" \"%param3%\"\r\n";
+				fileContents = fileContents + "if errorlevel 1 echo \"Error in %0\" exit\r\n";
+			}, this);
+		}
+			
+		filename = path.join(postBuildBatchFilesDir, filename);	
+		fs.writeFile(filename, fileContents);
+	}
 }
