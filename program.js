@@ -35,7 +35,7 @@ function Reference(element) {
 	
 	if (elementSplit.length > 1)
 	{
-		this.referenced = false;		
+		this.referenced = false;
 	}
 	else
 	{		
@@ -58,6 +58,10 @@ module.exports = Reference;
 function Component(splitData) {
   
   this.destinationFolder = "";
+  this.register = false;
+  this.sourceOnly = false;
+  this.noConfig = false;
+  
   if (splitData.length > 0)
   {
 	  this.id = splitData[0];
@@ -66,7 +70,6 @@ function Component(splitData) {
 		  var source = splitData[1];
 		  if (source.indexOf("\\\\") > 0)
 		  {
-		  	console.log("-----" + source);
 			  source = source.replace("\\\\",":\\");
 			  this.fullPath = true;
 		  }
@@ -91,11 +94,24 @@ function Component(splitData) {
 				  this.alternativeSource = splitData[3].replace("\\\\",":\\");;
 				  if (splitData.length > 4)
 				  {				 
-					  this.register = true;
-				  }
-				  else
-				  {
-				  	this.register = false;
+					  this.register = true;					  	
+					
+					  if (splitData.length > 5)
+					  {
+						  if (splitData[5] == "sourceOnly")
+						  {
+							  this.sourceOnly = true;
+						  }
+							  
+						  if (splitData.length > 6)
+						  {
+							  if (splitData[6] == "noConfig")
+							  {
+						  console.log("noConfig " + this.id + "-" + splitData[6]);
+								  this.noConfig = true;
+							  }
+						  }
+					  }	
 				  }
 			  }
 		  }
@@ -110,6 +126,8 @@ Component.prototype.copy = function()
 	newComponent.sourceFilenameOnly = this.sourceFilenameOnly;
 	newComponent.alternativeSource = this.alternativeSource;
 	newComponent.destinationFolder = this.destinationFolder;
+	newComponent.register = this.register;
+	newComponent.sourceOnly = this.sourceOnly;
 	
 	return newComponent;
 }
@@ -142,23 +160,42 @@ Component.prototype.GenerateArtifactInclude = function()
 	var artifactFullPath = this.source;
 
 	if (artifactFullPath !== undefined)
-	{			
+	{
 		// artifactFullPath is from the root folder of the project, however this is run from within the Setups folder
 		// so add a ..\
-		artifactFullPath = "..\\" + artifactFullPath;
-		include = include + "#ifexist \"" + artifactFullPath + "\"\r\n";
-		include = include + "\tSource: \"" + artifactFullPath + "\"; DestDir: \"{app}\\{#DestSubDir}\"; Flags: ignoreversion\r\n";
-		include = include + "#else\r\n";
-		include = include + "\tSource: \"..\\dependencies_svn\\dlls\\internal\\" + this.destinationFolder + this.sourceFilenameOnly + "\"; DestDir: \"{app}\\{#DestSubDir}\"; Flags: ignoreversion\r\n";
-		include = include + "#endif\r\n";
+		artifactFullPath = "..\\" + artifactFullPath;			
+		if (this.sourceOnly)
+		{
+			var destinationFolder = "";
+			if (this.destinationFolder.length > 0)
+			{
+				destinationFolder = "\\" + this.destinationFolder;
+			}
+			include = include + "Source: \"" + artifactFullPath + "\"; DestDir: \"{app}\\{#DestSubDir}" + destinationFolder + "\"; Flags: ignoreversion\r\n";			
+		}
+		else
+		{
+			include = include + "#ifexist \"" + artifactFullPath + "\"\r\n";
+			include = include + "\tSource: \"" + artifactFullPath + "\"; DestDir: \"{app}\\{#DestSubDir}\"; Flags: ignoreversion\r\n";
+			include = include + "#else\r\n";
+			include = include + "\tSource: \"..\\dependencies_svn\\dlls\\internal\\" + this.destinationFolder + this.sourceFilenameOnly + "\"; DestDir: \"{app}\\{#DestSubDir}\"; Flags: ignoreversion\r\n";
+			include = include + "#endif\r\n";
+		}
 	}
 				
-	if ((path.extname(artifactFullPath)) == ".exe")
+	if (this.noConfig)
 	{
-		var configComponent = this.copy();
-		configComponent.source = configComponent.source + ".config";
-		configComponent.sourceFilenameOnly = configComponent.sourceFilenameOnly + ".config";
-		include = include + "\r\n" + configComponent.GenerateArtifactInclude();
+		console.log("noConfig");
+	}
+	else
+	{
+		if ((path.extname(artifactFullPath)) == ".exe")
+		{
+			var configComponent = this.copy();
+			configComponent.source = configComponent.source + ".config";
+			configComponent.sourceFilenameOnly = configComponent.sourceFilenameOnly + ".config";
+			include = include + "\r\n" + configComponent.GenerateArtifactInclude();
+		}
 	}
 	
 	return include;
