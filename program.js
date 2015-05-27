@@ -18,6 +18,8 @@ var path = require('path');
 var async = require('async');
 var projectComponent = require("./projectComponent.js");
 var projectReference = require("./projectReference.js");
+var innoScript = require("./innoScript.js");
+var postBuildBatchFile = require("./postBuildBatchFile.js");
 
 var internalBelongsTo = [];
 var externalBelongsTo = [];
@@ -158,118 +160,9 @@ function ReadProjectDir(projectFile, bottomDir)
 		}
 	}, this);
 		
-	CreateIssDependencyScript(component, references, internalExtraReferences, externalReferences);
-	CreatePostBuildBatchFile(component, references, internalExtraReferences);
-}
-
-
-function CreateIssDependencyScript(component, internalDepencencies, internalExtraDependencies, externalDependencies)
-{
-	var filename = component + "_dependencies.iss";
-	var fileContents = "[Files]\r\n;Internal\r\n";
-	var originalScript = false;
+	var componentInnoScript = new innoScript();
+	componentInnoScript.CreateIssDependencyScript(component, references, internalExtraReferences, externalReferences, internalComponentsPath, externalComponentsPath, scriptsDir);
 	
-	// Build artifacts
-	var fetchedComponents = internalComponentsPath[component];
-		
-	if (fetchedComponents !== undefined)
-	{
-		fetchedComponents.forEach(function(fetchedComponent) {
-			originalScript = originalScript || fetchedComponent.original;
-			fileContents = fileContents + fetchedComponent.GenerateArtifactInclude(fetchedComponent.source) + "\r\n";
-		}, this);
-	}
-	else
-	{
-		fileContents = fileContents + "\r\n";
-	}
-	
-	if (!originalScript)
-	{			
-		internalDepencencies.forEach(function(ref) {
-			fileContents = fileContents + "#include \"" + ref.id + "_dependencies.iss\"\r\n";
-		}, this);
-			
-		if (internalExtraDependencies.length > 0) {
-			fileContents = fileContents + "\r\n;Internal but not referenced in Visual Studio\r\n";
-			internalExtraDependencies.forEach(function(extraRef) {			
-				var internalComponents = internalComponentsPath[extraRef.id];
-				var scriptFolder = "";
-				if (internalComponents !== undefined)
-				{
-					internalComponents.forEach(function(internalComponent) {
-						if (internalComponent.original)
-						{
-							scriptFolder = "originals\\";
-						}
-					}, this);
-				}
-				
-				fileContents = fileContents + "#include \"" + scriptFolder + extraRef.id + "_dependencies.iss\"\r\n";			
-			}, this);
-		}
-			
-		if (externalDependencies.length > 0) {
-			fileContents = fileContents + "\r\n;External";
-			externalDependencies.forEach(function(ref) {
-				var externalComponents = externalComponentsPath[ref.id];
-				if (externalComponents !== undefined)
-				{
-					fileContents = fileContents + "\r\n;" + ref.id + "\r\n";
-					externalComponents.forEach(function(externalComponent) {
-						fileContents = fileContents + externalComponent.GenerateExternalIssCopy();
-					}, this);
-				}
-			}, this);
-		}
-		
-		filename = path.join(scriptsDir, filename);
-		fs.writeFile(filename, fileContents);
-	}
-}
-
-function CreatePostBuildBatchFile(component, dependencies, internalExtraDependencies)
-{
-	var filename = "CopyDependenciesInternal" + component +  ".bat";
-	var originalBatchFile = false;
-	
-	var fileContents = "@echo off\r\n";
-	fileContents = fileContents + "REM 2 parameters are passed in wrapped in quotes, but this causes problems when using them but putting them in variables solves it\r\n";
-	fileContents = fileContents + "set param1=%~1\r\n";
-	fileContents = fileContents + "set param2=%~2\r\n";
-	fileContents = fileContents + "set param3=%~3\r\n";
-	fileContents = fileContents + "REM echo \"*** Parameter 1 removed quotes: (%param1%)\"\r\n";
-	fileContents = fileContents + "REM echo \"*** Parameter 2 removed quotes: (%param2%)\"\r\n";
-	fileContents = fileContents + "\r\n";
-	
-	var fetchedComponents = internalComponentsPath[component];
-	if (fetchedComponents !== undefined)
-	{
-		fetchedComponents.forEach(function(fetchedComponent) {
-			originalBatchFile = originalBatchFile || fetchedComponent.original;
-			fileContents = fileContents + fetchedComponent.GenerateArtifactBatchCopy();
-		}, this);
-	}
-		
-	if (!originalBatchFile)
-	{
-		dependencies.forEach(function(ref) {
-			fileContents = fileContents + "Call \"%param1%\\dependencies_svn\\scripts\\postbuild\\CopyDependenciesInternal";
-			fileContents = fileContents + ref.id + ".bat\" \"%param1%\" \"%param2%\" \"%param3%\"\r\n";
-			fileContents = fileContents + "if errorlevel 1 echo \"Error in %0\" exit\r\n";
-		}, this);
-		
-		if (internalExtraDependencies.length > 0)
-		{
-			fileContents = fileContents + "\r\nREM Internal but not referenced in Visual Studio\r\n";
-			internalExtraDependencies.forEach(function(ref) {
-				fileContents = fileContents + "Call \"%param1%\\dependencies_svn\\scripts\\postbuild\\CopyDependenciesInternal";
-				fileContents = fileContents + ref.id + ".bat\" \"%param1%\" \"%param2%\" \"%param3%\"\r\n";
-				fileContents = fileContents + "if errorlevel 1 echo \"Error in %0\" exit\r\n";
-			}, this);
-		}
-			
-		filename = path.join(postBuildBatchFilesDir, filename);	
-		fs.writeFile(filename, fileContents);
-	}
+	var componentBatchFile = new postBuildBatchFile();
+	componentBatchFile.CreatePostBuildBatchFile(component, references, internalExtraReferences, internalComponentsPath, externalComponentsPath, postBuildBatchFilesDir);
 }
