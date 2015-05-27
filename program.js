@@ -163,6 +163,6 @@ function ReadProjectDir(projectFile, bottomDir)
 	var componentInnoScript = new innoScript();
 	componentInnoScript.CreateIssDependencyScript(component, references, internalExtraReferences, externalReferences, internalComponentsPath, externalComponentsPath, scriptsDir);
 	
-	var componentBatchFile = new postBuildBatchFile();
-	componentBatchFile.CreatePostBuildBatchFile(component, references, internalExtraReferences, internalComponentsPath, externalComponentsPath, postBuildBatchFilesDir);
+	var componentBatchFile = new postBuildBatchFile(postBuildBatchFilesDir, component);
+	componentBatchFile.CreatePostBuildBatchFile(component, references, internalExtraReferences, internalComponentsPath, externalComponentsPath);
 }

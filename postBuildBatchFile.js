@@ -3,13 +3,14 @@
 var fs = require('fs');
 var path = require('path');
 
-function postBuildBatchFile() {
+function postBuildBatchFile(dir, component) {
+	this.filename = "CopyDependenciesInternal" + component +  ".bat";
+	this.filename = path.join(dir, this.filename);
 }
 
 postBuildBatchFile.prototype.CreatePostBuildBatchFile = function
-(component, dependencies, internalExtraDependencies, internalComponentsPath, externalComponentsPath, postBuildBatchFilesDir)
+(component, dependencies, internalExtraDependencies, internalComponentsPath, externalComponentsPath)
 {	
-	var filename = "CopyDependenciesInternal" + component +  ".bat";
 	var originalBatchFile = false;
 	
 	var fileContents = "@echo off\r\n";
@@ -33,24 +34,28 @@ postBuildBatchFile.prototype.CreatePostBuildBatchFile = function
 	if (!originalBatchFile)
 	{
 		dependencies.forEach(function(ref) {
-			fileContents = fileContents + "Call \"%param1%\\dependencies_svn\\scripts\\postbuild\\CopyDependenciesInternal";
-			fileContents = fileContents + ref.id + ".bat\" \"%param1%\" \"%param2%\" \"%param3%\"\r\n";
-			fileContents = fileContents + "if errorlevel 1 echo \"Error in %0\" exit\r\n";
+			fileContents = fileContents + this.BuildBatchFileCall(ref);
 		}, this);
 		
 		if (internalExtraDependencies.length > 0)
 		{
 			fileContents = fileContents + "\r\nREM Internal but not referenced in Visual Studio\r\n";
 			internalExtraDependencies.forEach(function(ref) {
-				fileContents = fileContents + "Call \"%param1%\\dependencies_svn\\scripts\\postbuild\\CopyDependenciesInternal";
-				fileContents = fileContents + ref.id + ".bat\" \"%param1%\" \"%param2%\" \"%param3%\"\r\n";
-				fileContents = fileContents + "if errorlevel 1 echo \"Error in %0\" exit\r\n";
+				fileContents = fileContents + this.BuildBatchFileCall(ref);
 			}, this);
 		}
 			
-		filename = path.join(postBuildBatchFilesDir, filename);	
-		fs.writeFile(filename, fileContents);
+		fs.writeFile(this.filename, fileContents);
 	}
+}
+
+postBuildBatchFile.prototype.BuildBatchFileCall = function(reference)
+{
+	var text = "Call \"%param1%\\dependencies_svn\\scripts\\postbuild\\CopyDependenciesInternal";
+	text = text + reference.id + ".bat\" \"%param1%\" \"%param2%\" \"%param3%\"\r\n";
+	text = text + "if errorlevel 1 echo \"Error in %0\" exit\r\n";
+	
+	return text;
 }
 
 // export the class
