@@ -16,6 +16,11 @@
 var fs = require('fs');
 var path = require('path');
 var async = require('async');
+var projectComponent = require("./projectComponent.js");
+var projectReference = require("./projectReference.js");
+var innoScript = require("./innoScript.js");
+var postBuildBatchFile = require("./postBuildBatchFile.js");
+
 var internalBelongsTo = [];
 var externalBelongsTo = [];
 var internalComponentsPath = [];
@@ -26,239 +31,6 @@ var externalComponentsDir = path.join(rootDir, "Dependencies\\Components\\extern
 var referencesDir = path.join(rootDir, "Dependencies\\References");
 var scriptsDir = path.join(rootDir, "Dependencies\\Generated scripts");
 var postBuildBatchFilesDir = path.join(rootDir, "Dependencies\\Generated scripts\\postbuild");
-
-// Component Constructor
-function Reference(element) {
-	
-	var elementSplit = element.split(":");
-	this.id = elementSplit[0].trim();
-	
-	if (elementSplit.length > 1)
-	{
-		this.referenced = false;
-	}
-	else
-	{		
-		this.referenced = true;
-	}
-}
-
-Reference.prototype.copy = function()
-{
-	var newReference = new Reference("");
-	newReference.id = this.id;
-	
-	return newReference;
-}
-
-// export the class
-module.exports = Reference;
-
-// Component Constructor
-function Component(splitData) {
-  
-  this.destinationFolder = "";
-  this.register = false;
-  this.sourceOnly = false;
-  this.noConfig = false;
-  this.original = false;
-  
-  if (splitData.length > 0)
-  {
-	  this.id = splitData[0];
-	  if (splitData.length > 1)
-	  { 
-		  var source = splitData[1];
-		  if (source.indexOf("\\\\") > 0)
-		  {
-			  source = source.replace("\\\\",":\\");
-			  this.fullPath = true;
-		  }
-		  else
-		  {				  	
-			  this.fullPath = false;
-		  }
-		  this.source = source;
-		  		  
-		  // Extract the filename from the full artifact path, note the file may not exist at this point in time
-		  // so we cannot use fs.stat
-		  var sourceSplit = this.source.split("\\");	
-		  this.sourceFilenameOnly = sourceSplit[sourceSplit.length - 1];
-		  
-		  if (splitData.length > 2)
-		  {
-			  console.log("Unexpected split length " + splitData.length + " for " + this.id);
-			  this.destinationFolder = splitData[2];
-			  
-			  if (splitData.length > 3)
-			  {				 
-				  this.alternativeSource = splitData[3].replace("\\\\",":\\");;
-				  if (splitData.length > 4)
-				  {				 
-					  this.register = true;					  	
-					
-					  if (splitData.length > 5)
-					  {
-						  if (splitData[5] == "sourceOnly")
-						  {
-							  this.sourceOnly = true;
-						  }
-							  
-						  if (splitData.length > 6)
-						  {
-							  if (splitData[6] == "noConfig")
-							  {
-								  this.noConfig = true;
-							  }
-							  
-							  if (splitData.length > 7)
-							  {
-								  if (splitData[7] == "original")
-								  {
-									  this.original = true;
-								  }
-							  }
-						  }
-					  }	
-				  }
-			  }
-		  }
-	  }
-  }  
-}
-
-Component.prototype.copy = function()
-{
-	var newComponent = new Component("");
-	newComponent.source = this.source;
-	newComponent.sourceFilenameOnly = this.sourceFilenameOnly;
-	newComponent.alternativeSource = this.alternativeSource;
-	newComponent.destinationFolder = this.destinationFolder;
-	newComponent.register = this.register;
-	newComponent.sourceOnly = this.sourceOnly;
-	newComponent.noConfig = this.noConfig;
-	newComponent.original = this.original;
-	
-	return newComponent;
-}
-
-// TODO refactor this with GenerateArtifactInclude
-Component.prototype.GenerateArtifactBatchCopy = function()
-{
-	var copy = "";
-	var batchSource = this.source;
-
-	if (batchSource !== undefined)
-	{	
-		// Replace any exlpicit Release directory with param3
-		batchSource = batchSource.replace("Release", "%param3%");
-		
-		copy = copy + "if not exist \"%param1%\\" + batchSource + "\" (\r\n";
-		copy = copy + "\tcopy /Y \"%param1%\\dependencies_svn\\dlls\\internal\\" + this.destinationFolder + this.sourceFilenameOnly + "\" \"%param2%\"\r\n";
-		copy = copy + "\tif errorlevel 1 echo \"Error in %0\" exit\r\n";
-		copy = copy + ")\r\n";
-		copy = copy + "\r\n";		
-	}
-	
-	return copy;
-}
-
-// TODO refactor this with GenerateArtifactBatchCopy
-Component.prototype.GenerateArtifactInclude = function()
-{
-	var include = "";
-	var artifactFullPath = this.source;
-
-	if (artifactFullPath !== undefined)
-	{
-		// artifactFullPath is from the root folder of the project, however this is run from within the Setups folder
-		// so add a ..\
-		artifactFullPath = "..\\" + artifactFullPath;			
-		if (this.sourceOnly)
-		{
-			var destinationFolder = "";
-			if (this.destinationFolder.length > 0)
-			{
-				destinationFolder = "\\" + this.destinationFolder;
-			}
-			include = include + "Source: \"" + artifactFullPath + "\"; DestDir: \"{app}\\{#DestSubDir}" + destinationFolder + "\"; Flags: ignoreversion\r\n";			
-		}
-		else
-		{
-			include = include + "#ifexist \"" + artifactFullPath + "\"\r\n";
-			include = include + "\tSource: \"" + artifactFullPath + "\"; DestDir: \"{app}\\{#DestSubDir}\"; Flags: ignoreversion\r\n";
-			include = include + "#else\r\n";
-			include = include + "\tSource: \"..\\dependencies_svn\\dlls\\internal\\" + this.destinationFolder + this.sourceFilenameOnly + "\"; DestDir: \"{app}\\{#DestSubDir}\"; Flags: ignoreversion\r\n";
-			include = include + "#endif\r\n";
-		}
-	}
-				
-	if (this.noConfig)
-	{
-		console.log("noConfig");
-	}
-	else
-	{
-		if ((path.extname(artifactFullPath)) == ".exe")
-		{
-			var configComponent = this.copy();
-			configComponent.source = configComponent.source + ".config";
-			configComponent.sourceFilenameOnly = configComponent.sourceFilenameOnly + ".config";
-			include = include + "\r\n" + configComponent.GenerateArtifactInclude();
-		}
-	}
-	
-	return include;
-}
-
-// At the moment this only handles one file per external
-Component.prototype.GenerateExternalIssCopy = function()
-{
-	var destinationFolder = "";
-	if (this.destinationFolder.length > 0)
-	{
-		destinationFolder = "\\" + this.destinationFolder;
-	}
-	
-	var sourcePath = "\"..\\Dependencies_svn\\dlls\\external\\" + this.source;
-	if (this.fullPath)
-	{
-		sourcePath = "\"" + this.source;
-	}
-	
-	var register = "";
-	if (this.register)
-	{
-		register = " regserver 32bit";
-	}
-	
-	if (this.alternativeSource !== undefined)
-	{
-		if (this.alternativeSource.length > 0)
-		{
-			var include = "";
-		// artifactFullPath is from the root folder of the project, however this is run from within the Setups folder
-		// so add a ..\
-			var altSourcePath = "..\\" + this.alternativeSource;
-			include = include + "#ifexist \"" + altSourcePath + "\"\r\n";
-			include = include + "\tSource: \"" + altSourcePath + "\"; DestDir: \"{app}\\{#DestSubDir}\"; Flags: ignoreversion\r\n";
-			include = include + "#else\r\n";
-			include = include + "\tSource: " + sourcePath + "\"; DestDir: \"{app}\\{#DestSubDir}" + destinationFolder + "\"; Flags: ignoreversion\r\n";
-			include = include + "#endif\r\n";
-			
-			return include;
-		}
-	}
-	
-	return "Source: " + sourcePath + "\"; DestDir: \"{app}\\{#DestSubDir}" + destinationFolder + "\"; Flags: ignoreversion" + register + "\r\n";
-}
-
-// class methods
-Component.prototype.fooBar = function() {
-
-};
-// export the class
-module.exports = Component;
 
 // TODO Delete all previous audo generated scripts
 //fs.mkdirSync(scriptsDir);
@@ -285,7 +57,7 @@ fs.readdir(internalComponentsDir, function(err, internalFiles)
 function ProcessInternalComponent(file, elementSplit)
 {
 	var project = elementSplit[0];
-	var internalComponent = new Component(elementSplit);
+	var internalComponent = new projectComponent(elementSplit);
 	
 	internalBelongsTo[project] = file;
 	if (elementSplit.length > 1)
@@ -302,7 +74,7 @@ function ProcessInternalComponent(file, elementSplit)
 function ProcessExternalComponent(file, elementSplit)
 {
 	var project = elementSplit[0];
-	var externalComponent = new Component(elementSplit);
+	var externalComponent = new projectComponent(elementSplit);
 	
 	externalBelongsTo[project] = file;
 	if (elementSplit.length > 1)
@@ -360,7 +132,7 @@ function ReadProjectDir(projectFile, bottomDir)
 	var externalReferences = [];
 	var internalExtraReferences = [];			
 	referenceFileContents.split(',').forEach(function(element) {
-		reference = new Reference(element);
+		reference = new projectReference(element);
 		if (internalBelongsTo[reference.id] !== undefined)
 		{
 			// This belongsTo can be used for CruiseControl
@@ -388,118 +160,9 @@ function ReadProjectDir(projectFile, bottomDir)
 		}
 	}, this);
 		
-	CreateIssDependencyScript(component, references, internalExtraReferences, externalReferences);
-	CreatePostBuildBatchFile(component, references, internalExtraReferences);
-}
-
-
-function CreateIssDependencyScript(component, internalDepencencies, internalExtraDependencies, externalDependencies)
-{
-	var filename = component + "_dependencies.iss";
-	var fileContents = "[Files]\r\n;Internal\r\n";
-	var originalScript = false;
+	var componentInnoScript = new innoScript();
+	componentInnoScript.CreateIssDependencyScript(component, references, internalExtraReferences, externalReferences, internalComponentsPath, externalComponentsPath, scriptsDir);
 	
-	// Build artifacts
-	var fetchedComponents = internalComponentsPath[component];
-		
-	if (fetchedComponents !== undefined)
-	{
-		fetchedComponents.forEach(function(fetchedComponent) {
-			originalScript = originalScript || fetchedComponent.original;
-			fileContents = fileContents + fetchedComponent.GenerateArtifactInclude(fetchedComponent.source) + "\r\n";
-		}, this);
-	}
-	else
-	{
-		fileContents = fileContents + "\r\n";
-	}
-	
-	if (!originalScript)
-	{			
-		internalDepencencies.forEach(function(ref) {
-			fileContents = fileContents + "#include \"" + ref.id + "_dependencies.iss\"\r\n";
-		}, this);
-			
-		if (internalExtraDependencies.length > 0) {
-			fileContents = fileContents + "\r\n;Internal but not referenced in Visual Studio\r\n";
-			internalExtraDependencies.forEach(function(extraRef) {			
-				var internalComponents = internalComponentsPath[extraRef.id];
-				var scriptFolder = "";
-				if (internalComponents !== undefined)
-				{
-					internalComponents.forEach(function(internalComponent) {
-						if (internalComponent.original)
-						{
-							scriptFolder = "originals\\";
-						}
-					}, this);
-				}
-				
-				fileContents = fileContents + "#include \"" + scriptFolder + extraRef.id + "_dependencies.iss\"\r\n";			
-			}, this);
-		}
-			
-		if (externalDependencies.length > 0) {
-			fileContents = fileContents + "\r\n;External";
-			externalDependencies.forEach(function(ref) {
-				var externalComponents = externalComponentsPath[ref.id];
-				if (externalComponents !== undefined)
-				{
-					fileContents = fileContents + "\r\n;" + ref.id + "\r\n";
-					externalComponents.forEach(function(externalComponent) {
-						fileContents = fileContents + externalComponent.GenerateExternalIssCopy();
-					}, this);
-				}
-			}, this);
-		}
-		
-		filename = path.join(scriptsDir, filename);
-		fs.writeFile(filename, fileContents);
-	}
-}
-
-function CreatePostBuildBatchFile(component, dependencies, internalExtraDependencies)
-{
-	var filename = "CopyDependenciesInternal" + component +  ".bat";
-	var originalBatchFile = false;
-	
-	var fileContents = "@echo off\r\n";
-	fileContents = fileContents + "REM 2 parameters are passed in wrapped in quotes, but this causes problems when using them but putting them in variables solves it\r\n";
-	fileContents = fileContents + "set param1=%~1\r\n";
-	fileContents = fileContents + "set param2=%~2\r\n";
-	fileContents = fileContents + "set param3=%~3\r\n";
-	fileContents = fileContents + "REM echo \"*** Parameter 1 removed quotes: (%param1%)\"\r\n";
-	fileContents = fileContents + "REM echo \"*** Parameter 2 removed quotes: (%param2%)\"\r\n";
-	fileContents = fileContents + "\r\n";
-	
-	var fetchedComponents = internalComponentsPath[component];
-	if (fetchedComponents !== undefined)
-	{
-		fetchedComponents.forEach(function(fetchedComponent) {
-			originalBatchFile = originalBatchFile || fetchedComponent.original;
-			fileContents = fileContents + fetchedComponent.GenerateArtifactBatchCopy();
-		}, this);
-	}
-		
-	if (!originalBatchFile)
-	{
-		dependencies.forEach(function(ref) {
-			fileContents = fileContents + "Call \"%param1%\\dependencies_svn\\scripts\\postbuild\\CopyDependenciesInternal";
-			fileContents = fileContents + ref.id + ".bat\" \"%param1%\" \"%param2%\" \"%param3%\"\r\n";
-			fileContents = fileContents + "if errorlevel 1 echo \"Error in %0\" exit\r\n";
-		}, this);
-		
-		if (internalExtraDependencies.length > 0)
-		{
-			fileContents = fileContents + "\r\nREM Internal but not referenced in Visual Studio\r\n";
-			internalExtraDependencies.forEach(function(ref) {
-				fileContents = fileContents + "Call \"%param1%\\dependencies_svn\\scripts\\postbuild\\CopyDependenciesInternal";
-				fileContents = fileContents + ref.id + ".bat\" \"%param1%\" \"%param2%\" \"%param3%\"\r\n";
-				fileContents = fileContents + "if errorlevel 1 echo \"Error in %0\" exit\r\n";
-			}, this);
-		}
-			
-		filename = path.join(postBuildBatchFilesDir, filename);	
-		fs.writeFile(filename, fileContents);
-	}
+	var componentBatchFile = new postBuildBatchFile();
+	componentBatchFile.CreatePostBuildBatchFile(component, references, internalExtraReferences, internalComponentsPath, externalComponentsPath, postBuildBatchFilesDir);
 }
