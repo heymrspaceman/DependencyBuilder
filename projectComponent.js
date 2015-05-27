@@ -89,27 +89,6 @@ projectComponent.prototype.copy = function()
 	return newComponent;
 }
 
-// TODO refactor this with GenerateArtifactInclude
-projectComponent.prototype.GenerateArtifactBatchCopy = function()
-{
-	var copy = "";
-	var batchSource = this.source;
-
-	if (batchSource !== undefined)
-	{	
-		// Replace any exlpicit Release directory with param3
-		batchSource = batchSource.replace("Release", "%param3%");
-		
-		copy = copy + "if not exist \"%param1%\\" + batchSource + "\" (\r\n";
-		copy = copy + "\tcopy /Y \"%param1%\\dependencies_svn\\dlls\\internal\\" + this.destinationFolder + this.sourceFilenameOnly + "\" \"%param2%\"\r\n";
-		copy = copy + "\tif errorlevel 1 echo \"Error in %0\" exit\r\n";
-		copy = copy + ")\r\n";
-		copy = copy + "\r\n";		
-	}
-	
-	return copy;
-}
-
 // TODO refactor this with GenerateArtifactBatchCopy
 projectComponent.prototype.GenerateArtifactInclude = function()
 {

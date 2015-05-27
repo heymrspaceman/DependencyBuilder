@@ -27,7 +27,7 @@ postBuildBatchFile.prototype.CreatePostBuildBatchFile = function
 	{
 		fetchedComponents.forEach(function(fetchedComponent) {
 			originalBatchFile = originalBatchFile || fetchedComponent.original;
-			fileContents = fileContents + fetchedComponent.GenerateArtifactBatchCopy();
+			fileContents = fileContents + this.GenerateArtifactBatchCopy(fetchedComponent);
 		}, this);
 	}
 		
@@ -56,6 +56,28 @@ postBuildBatchFile.prototype.BuildBatchFileCall = function(reference)
 	text = text + "if errorlevel 1 echo \"Error in %0\" exit\r\n";
 	
 	return text;
+}
+
+
+// TODO refactor this with GenerateArtifactInclude
+postBuildBatchFile.prototype.GenerateArtifactBatchCopy = function(reference)
+{
+	var copy = "";
+	var batchSource = reference.source;
+
+	if (batchSource !== undefined)
+	{	
+		// Replace any exlpicit Release directory with param3
+		batchSource = batchSource.replace("Release", "%param3%");
+		
+		copy = copy + "if not exist \"%param1%\\" + batchSource + "\" (\r\n";
+		copy = copy + "\tcopy /Y \"%param1%\\dependencies_svn\\dlls\\internal\\" + reference.destinationFolder + reference.sourceFilenameOnly + "\" \"%param2%\"\r\n";
+		copy = copy + "\tif errorlevel 1 echo \"Error in %0\" exit\r\n";
+		copy = copy + ")\r\n";
+		copy = copy + "\r\n";		
+	}
+	
+	return copy;
 }
 
 // export the class
