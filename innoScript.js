@@ -44,7 +44,7 @@ innoScript.prototype.CreateIssDependencyScript = function
 					internalComponents.forEach(function(internalComponent) {
 						if (internalComponent.original)
 						{
-							scriptFolder = "originals\\";
+							scriptFolder = "original\\";
 						}
 					}, this);
 				}
