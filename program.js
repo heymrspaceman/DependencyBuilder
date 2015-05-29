@@ -27,10 +27,20 @@ var internalComponentsPath = [];
 var externalComponentsPath = [];
 var rootDir = ".";
 var internalComponentsDir = path.join(rootDir, "Dependencies\\Components");
+var internalComponentsJsonDir = path.join(rootDir, "Dependencies\\ComponentsJson");
 var externalComponentsDir = path.join(rootDir, "Dependencies\\Components\\external");
 var referencesDir = path.join(rootDir, "Dependencies\\References");
 var scriptsDir = path.join(rootDir, "Dependencies\\Generated scripts");
 var postBuildBatchFilesDir = path.join(rootDir, "Dependencies\\Generated scripts\\postbuild");
+
+
+var jsFileContents = fs.readFileSync(".\\VMSComms.json", 'UTF-8');
+JSON.parse(jsFileContents, function(k, v) {
+	console.log("Key: " + k + ", value: " + v);
+  //console.log(k); // log the current property name, the last is "".
+  //return v;       // return the unchanged property value.
+});
+//return;
 
 // TODO Delete all previous audo generated scripts
 //fs.mkdirSync(scriptsDir);
@@ -40,10 +50,20 @@ fs.readdir(internalComponentsDir, function(err, internalFiles)
 {
 	ReadComponents(internalComponentsDir, internalFiles, ProcessInternalComponent);	
 	
+	fs.readdir(internalComponentsJsonDir, function(err, jsonFiles)
+	{
+		ReadComponents(internalComponentsJsonDir, jsonFiles, ProcessInternalComponent);	
+	});
+	
 	fs.readdir(externalComponentsDir, function(err, files)
 	{
 		ReadComponents(externalComponentsDir, files, ProcessExternalComponent);	
 	});
+	
+	// Read VMSStream.txt
+	//ReadComponents(path.join(rootDir, "Dependencies\\ComponentsTxt"), ["VMSComms.txt"], ProcessInternalComponent);
+	//ReadComponents(path.join(rootDir, "Dependencies\\ComponentsJson"), ["VMSComms.json"], ProcessInternalComponent);	
+	//ReadComponents(path.join(rootDir, "Dependencies\\ComponentsJson"), ["VMSDebugLog.json"], ProcessInternalComponent);	
 	
 	// Synchronous forEachs will have all finished by now	
 	fs.readdir(referencesDir, function(err, solutionDirs)
@@ -54,13 +74,25 @@ fs.readdir(internalComponentsDir, function(err, internalFiles)
 	});
 });
 
-function ProcessInternalComponent(file, elementSplit)
+function ProcessInternalComponent(file, elementSplit, obj)
 {
-	var project = elementSplit[0];
-	var internalComponent = new projectComponent(elementSplit);
+	var project;
+	var componentOk = false;
+	if (elementSplit != undefined)
+	{
+		project = elementSplit[0];
+		componentOk = (elementSplit.length > 1);
+	}
+	if (obj != undefined)
+	{
+		project = obj.name;
+		componentOk = true;
+	}
+	
+	var internalComponent = new projectComponent(elementSplit, obj);
 	
 	internalBelongsTo[project] = file;
-	if (elementSplit.length > 1)
+	if (componentOk)
 	{
 		// Add this to the list of components
 		if (internalComponentsPath[project] == undefined)
@@ -97,13 +129,24 @@ function ReadComponents(componentsDir, files, ProcessComponent)
 		if (!fs.statSync(fullPath).isDirectory())
 		{
 			var fileContents = fs.readFileSync(fullPath, 'UTF-8');
-	
-			fileContents.split(',').forEach(function(element) {
-				// Each component is split into the project name and the actual path to the artifact
-				var elementSplit = element.trim().split(":");
+			
+			if (path.extname(fullPath) == ".txt")
+			{	
+				fileContents.split(',').forEach(function(element) {
+					// Each component is split into the project name and the actual path to the artifact
+					var elementSplit = element.trim().split(":");
+					
+					ProcessComponent(file, elementSplit, undefined);
+				}, this);
+			}
+			else
+			{								
+				var myJson = JSON.parse(fileContents);
 				
-				ProcessComponent(file, elementSplit);
-			}, this);
+				for (var i = 0; i < myJson.components.length; i++) {
+				    ProcessComponent(file, undefined, myJson.components[i]);				
+				}
+			}
 		}
 	}, this);
 }

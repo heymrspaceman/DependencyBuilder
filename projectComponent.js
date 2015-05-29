@@ -2,13 +2,38 @@
 
 var path = require('path');
 
-function projectComponent(splitData) {
+function projectComponent(splitData, obj) {
   
   this.destinationFolder = "";
   this.register = false;
   this.sourceOnly = false;
   this.noConfig = false;
   this.original = false;
+  
+  if (obj != undefined)
+  {
+	  this.id = obj.name;
+	  this.original = (obj.original != undefined);
+	  this.noConfig = (obj.noConfig != undefined);
+	  
+	  if (obj.artifact != undefined)
+	  {
+		  this.source = obj.artifact;
+		  this.sourceOnly = (obj.sourceOnly != undefined);
+		  
+		  if (obj.destinationFolder != undefined)
+		  {
+			  this.destinationFolder = obj.destinationFolder;
+		  }
+			  		  
+		  // Extract the filename from the full artifact path, note the file may not exist at this point in time
+		  // so we cannot use fs.stat
+		  var sourceSplit = this.source.split("\\");	
+		  this.sourceFilenameOnly = sourceSplit[sourceSplit.length - 1];
+	  }
+	  
+	  return;
+  }  
   
   if (splitData.length > 0)
   {
