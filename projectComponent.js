@@ -15,11 +15,27 @@ function projectComponent(splitData, obj) {
 	  this.id = obj.name;
 	  this.original = (obj.original != undefined);
 	  this.noConfig = (obj.noConfig != undefined);
+	  this.register = (obj.register != undefined);
 	  
 	  if (obj.artifact != undefined)
 	  {
-		  this.source = obj.artifact;
+		  var source = obj.artifact;
+		  if (source.indexOf("\\\\") > 0)
+		  {
+			  source = source.replace("\\\\",":\\");
+			  this.fullPath = true;
+		  }
+		  else
+		  {				  	
+			  this.fullPath = false;
+		  }		  
+		  
+		  this.source = source;
 		  this.sourceOnly = (obj.sourceOnly != undefined);
+		  if (obj.alternativeSource != undefined)
+		  {
+			  this.alternativeSource = obj.alternativeSource.replace("\\\\",":\\");
+		  }
 		  
 		  if (obj.destinationFolder != undefined)
 		  {

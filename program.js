@@ -29,6 +29,7 @@ var rootDir = ".";
 var internalComponentsDir = path.join(rootDir, "Dependencies\\Components");
 var internalComponentsJsonDir = path.join(rootDir, "Dependencies\\ComponentsJson");
 var externalComponentsDir = path.join(rootDir, "Dependencies\\Components\\external");
+var externalComponentsJsonDir = path.join(rootDir, "Dependencies\\ComponentsJson\\external");
 var referencesDir = path.join(rootDir, "Dependencies\\References");
 var scriptsDir = path.join(rootDir, "Dependencies\\Generated scripts");
 var postBuildBatchFilesDir = path.join(rootDir, "Dependencies\\Generated scripts\\postbuild");
@@ -58,6 +59,11 @@ fs.readdir(internalComponentsDir, function(err, internalFiles)
 	fs.readdir(externalComponentsDir, function(err, files)
 	{
 		ReadComponents(externalComponentsDir, files, ProcessExternalComponent);	
+	});
+	
+	fs.readdir(externalComponentsJsonDir, function(err, jsonExternalFiles)
+	{
+		ReadComponents(externalComponentsJsonDir, jsonExternalFiles, ProcessExternalComponent);	
 	});
 	
 	// Read VMSStream.txt
@@ -103,13 +109,30 @@ function ProcessInternalComponent(file, elementSplit, obj)
 	}
 }
 
-function ProcessExternalComponent(file, elementSplit)
+function ProcessExternalComponent(file, elementSplit, obj)
 {
-	var project = elementSplit[0];
-	var externalComponent = new projectComponent(elementSplit);
+	var project;
+	var componentOk = false;
+	if (elementSplit != undefined)
+	{
+		project = elementSplit[0];
+		componentOk = (elementSplit.length > 1);
+	}
+	if (obj != undefined)
+	{
+		console.log("HELLO " + obj.name);
+		project = obj.name;
+		componentOk = true;
+	}
 	
+	var externalComponent = new projectComponent(elementSplit, obj);
+	
+	if (obj != undefined)
+	{
+		console.log("HELLO " + project);
+	}
 	externalBelongsTo[project] = file;
-	if (elementSplit.length > 1)
+	if (componentOk)
 	{
 		// Add this to the list of components
 		if (externalComponentsPath[project] == undefined)
