@@ -196,9 +196,11 @@ function ReadProjectDir(projectFile, bottomDir)
 	var reference = "";
 	var references = [];		
 	var externalReferences = [];
-	var internalExtraReferences = [];			
+	var internalExtraReferences = [];	
+	var jsonReferences = [];		
 	referenceFileContents.split(',').forEach(function(element) {
 		reference = new projectReference(element);
+		jsonReferences.push(reference);
 		if (internalBelongsTo[reference.id] !== undefined)
 		{
 			// This belongsTo can be used for CruiseControl
@@ -225,6 +227,26 @@ function ReadProjectDir(projectFile, bottomDir)
 			}
 		}
 	}, this);
+	
+	// Following code used to create references json file from old csv format
+	/*var jsonFile = projectFile.replace(".txt", ".json");
+	jsonFile = jsonFile.replace("References", "ReferencesJsonCreated");
+	var jsonText = "";
+	var fileContents = "{\"components\":[\r\n";
+	jsonReferences.forEach(function(jsonRef) {
+		jsonText = "\"name\":\"" + jsonRef.id + "\"";
+		if (!jsonRef.referenced)
+		{
+			jsonText = jsonText + ", \"referenced\":\"false\"";
+		}
+		fileContents = fileContents + "\t{" + jsonText + "},\r\n"; 
+	}, this);
+	
+	fileContents = fileContents + "RemoveLastComma";
+	fileContents = fileContents.replace(",\r\nRemoveLastComma", "\r\n");
+	fileContents = fileContents + "]}";
+	console.log("Create " + jsonFile);
+	fs.writeFile(jsonFile, fileContents);*/
 		
 	var componentInnoScript = new innoScript();
 	componentInnoScript.CreateIssDependencyScript(component, references, internalExtraReferences, externalReferences, internalComponentsPath, externalComponentsPath, scriptsDir);
