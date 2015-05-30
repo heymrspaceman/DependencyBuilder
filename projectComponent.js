@@ -2,7 +2,7 @@
 
 var path = require('path');
 
-function projectComponent(splitData, obj) {
+function projectComponent(obj) {
   
   this.destinationFolder = "";
   this.register = false;
@@ -50,74 +50,11 @@ function projectComponent(splitData, obj) {
 	  
 	  return;
   }  
-  
-  if (splitData.length > 0)
-  {
-	  this.id = splitData[0];
-	  if (splitData.length > 1)
-	  { 
-		  var source = splitData[1];
-		  if (source.indexOf("\\\\") > 0)
-		  {
-			  source = source.replace("\\\\",":\\");
-			  this.fullPath = true;
-		  }
-		  else
-		  {				  	
-			  this.fullPath = false;
-		  }
-		  this.source = source;
-		  		  
-		  // Extract the filename from the full artifact path, note the file may not exist at this point in time
-		  // so we cannot use fs.stat
-		  var sourceSplit = this.source.split("\\");	
-		  this.sourceFilenameOnly = sourceSplit[sourceSplit.length - 1];
-		  
-		  if (splitData.length > 2)
-		  {
-			  console.log("Unexpected split length " + splitData.length + " for " + this.id);
-			  this.destinationFolder = splitData[2];
-			  
-			  if (splitData.length > 3)
-			  {				 
-				  this.alternativeSource = splitData[3].replace("\\\\",":\\");;
-				  if (splitData.length > 4)
-				  {				 
-					  this.register = true;					  	
-					
-					  if (splitData.length > 5)
-					  {
-						  if (splitData[5] == "sourceOnly")
-						  {
-							  this.sourceOnly = true;
-						  }
-							  
-						  if (splitData.length > 6)
-						  {
-							  if (splitData[6] == "noConfig")
-							  {
-								  this.noConfig = true;
-							  }
-							  
-							  if (splitData.length > 7)
-							  {
-								  if (splitData[7] == "original")
-								  {
-									  this.original = true;
-								  }
-							  }
-						  }
-					  }	
-				  }
-			  }
-		  }
-	  }
-  }  
 }
 
 projectComponent.prototype.copy = function()
 {
-	var newComponent = new projectComponent("");
+	var newComponent = new projectComponent(undefined);
 	newComponent.source = this.source;
 	newComponent.sourceFilenameOnly = this.sourceFilenameOnly;
 	newComponent.alternativeSource = this.alternativeSource;
