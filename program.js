@@ -54,62 +54,34 @@ fs.readdir(internalComponentsJsonDir, function(err, internalFiles)
 	});
 });
 
-function ProcessInternalComponent(file, elementSplit, obj)
+function ProcessInternalComponent(file, obj)
 {
-	var project;
-	var componentOk = false;
-	if (elementSplit != undefined)
-	{
-		project = elementSplit[0];
-		componentOk = (elementSplit.length > 1);
-	}
-	if (obj != undefined)
-	{
-		project = obj.name;
-		componentOk = true;
-	}
+	var project = obj.name;
 	
 	var internalComponent = new projectComponent(obj);
 	
 	internalBelongsTo[project] = file;
-	if (componentOk)
+	// Add this to the list of components
+	if (internalComponentsPath[project] == undefined)
 	{
-		// Add this to the list of components
-		if (internalComponentsPath[project] == undefined)
-		{
-			internalComponentsPath[project] = [];
-		}
-		internalComponentsPath[project].push(internalComponent);
+		internalComponentsPath[project] = [];
 	}
+	internalComponentsPath[project].push(internalComponent);
 }
 
-function ProcessExternalComponent(file, elementSplit, obj)
+function ProcessExternalComponent(file, obj)
 {
-	var project;
-	var componentOk = false;
-	if (elementSplit != undefined)
-	{
-		project = elementSplit[0];
-		componentOk = (elementSplit.length > 1);
-	}
-	if (obj != undefined)
-	{
-		project = obj.name;
-		componentOk = true;
-	}
+	var project = obj.name;
 	
 	var externalComponent = new projectComponent(obj);
 	
 	externalBelongsTo[project] = file;
-	if (componentOk)
+	// Add this to the list of components		
+	if (externalComponentsPath[project] == undefined)
 	{
-		// Add this to the list of components
-		if (externalComponentsPath[project] == undefined)
-		{
-			externalComponentsPath[project] = [];
-		}
-		externalComponentsPath[project].push(externalComponent);
+		externalComponentsPath[project] = [];
 	}
+	externalComponentsPath[project].push(externalComponent);
 }
 
 function ReadComponents(componentsDir, files, ProcessComponent)
@@ -121,23 +93,10 @@ function ReadComponents(componentsDir, files, ProcessComponent)
 		if (!fs.statSync(fullPath).isDirectory())
 		{
 			var fileContents = fs.readFileSync(fullPath, 'UTF-8');
-			
-			if (path.extname(fullPath) == ".txt")
-			{	
-				fileContents.split(',').forEach(function(element) {
-					// Each component is split into the project name and the actual path to the artifact
-					var elementSplit = element.trim().split(":");
-					
-					ProcessComponent(file, elementSplit, undefined);
-				}, this);
-			}
-			else
-			{								
-				var myJson = JSON.parse(fileContents);
+			var myJson = JSON.parse(fileContents);
 				
-				for (var i = 0; i < myJson.components.length; i++) {
-				    ProcessComponent(file, undefined, myJson.components[i]);				
-				}
+			for (var i = 0; i < myJson.components.length; i++) {
+			    ProcessComponent(file, myJson.components[i]);				
 			}
 		}
 	}, this);

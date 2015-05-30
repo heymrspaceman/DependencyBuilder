@@ -4,7 +4,6 @@ function projectReference(obj) {
 	
     if (obj != undefined)
     {
-		console.log("AAA : " + obj.name);
 		this.id = obj.name;
 		this.referenced = (obj.referenced == undefined);
 		return;
