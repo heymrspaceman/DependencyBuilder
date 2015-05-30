@@ -31,6 +31,7 @@ var internalComponentsJsonDir = path.join(rootDir, "Dependencies\\ComponentsJson
 var externalComponentsDir = path.join(rootDir, "Dependencies\\Components\\external");
 var externalComponentsJsonDir = path.join(rootDir, "Dependencies\\ComponentsJson\\external");
 var referencesDir = path.join(rootDir, "Dependencies\\References");
+var referencesJsonDir = path.join(rootDir, "Dependencies\\ReferencesJson");
 var scriptsDir = path.join(rootDir, "Dependencies\\Generated scripts");
 var postBuildBatchFilesDir = path.join(rootDir, "Dependencies\\Generated scripts\\postbuild");
 
@@ -75,7 +76,14 @@ fs.readdir(internalComponentsDir, function(err, internalFiles)
 	fs.readdir(referencesDir, function(err, solutionDirs)
 	{	
 		for (var i = 0; i < solutionDirs.length; i++) {			
-			ReadSolutionDir(path.join(referencesDir, solutionDirs[i]));			
+			//ReadSolutionDir(path.join(referencesDir, solutionDirs[i]));			
+		}
+	});
+	// Synchronous forEachs will have all finished by now	
+	fs.readdir(referencesJsonDir, function(err, solutionJsonDirs)
+	{	
+		for (var i = 0; i < solutionJsonDirs.length; i++) {			
+			ReadSolutionJsonDir(path.join(referencesJsonDir, solutionJsonDirs[i]));			
 		}
 	});
 });
@@ -120,17 +128,12 @@ function ProcessExternalComponent(file, elementSplit, obj)
 	}
 	if (obj != undefined)
 	{
-		console.log("HELLO " + obj.name);
 		project = obj.name;
 		componentOk = true;
 	}
 	
 	var externalComponent = new projectComponent(elementSplit, obj);
 	
-	if (obj != undefined)
-	{
-		console.log("HELLO " + project);
-	}
 	externalBelongsTo[project] = file;
 	if (componentOk)
 	{
@@ -185,6 +188,107 @@ function ReadSolutionDir(solutionDir)
 			}
 		});	
 	}
+}
+
+function ReadSolutionJsonDir(solutionDir)
+{
+	if (fs.statSync(solutionDir).isDirectory())
+	{
+		fs.readdir(solutionDir, function(err, projectFiles)
+		{
+			for (var i = 0; i < projectFiles.length; i++) {			
+				ReadProjectJsonDir(path.join(solutionDir, projectFiles[i]), projectFiles[i]);			
+			}
+		});	
+	}
+}
+
+function ReadProjectJsonDir(projectFile, bottomDir)
+{
+	console.log("New: 1 " + projectFile);
+	
+	var component = bottomDir.replace(".json", "");
+	console.log("Processing " + component);
+	
+	var referenceFileContents = fs.readFileSync(projectFile, 'UTF-8');
+	var myJson = JSON.parse(referenceFileContents);
+	var reference = "";
+	var references = [];		
+	var externalReferences = [];
+	var internalExtraReferences = [];	
+	var jsonReferences = [];	
+	
+	for (var i = 0; i < myJson.components.length; i++) {
+		reference = new projectReference(undefined,  myJson.components[i]);
+		jsonReferences.push(reference);
+		if (internalBelongsTo[reference.id] !== undefined)
+		{
+			// This belongsTo can be used for CruiseControl
+			//console.log("[" + belongsTo[reference]  +"] " + reference);
+			if (reference.referenced)
+			{
+				references.push(reference);
+			}
+			else
+			{
+				internalExtraReferences.push(reference);
+			}
+		}
+		else
+		{
+			// Check external refernces
+			if (externalBelongsTo[reference.id] !== undefined)
+			{
+				externalReferences.push(reference);
+			}
+			else
+			{
+				console.log("reference not found: " + reference.id);
+			}
+		}
+	}
+	
+	/*var reference = "";
+	var references = [];		
+	var externalReferences = [];
+	var internalExtraReferences = [];	
+	var jsonReferences = [];		
+	referenceFileContents.split(',').forEach(function(element) {
+		reference = new projectReference(element);
+		jsonReferences.push(reference);
+		if (internalBelongsTo[reference.id] !== undefined)
+		{
+			// This belongsTo can be used for CruiseControl
+			//console.log("[" + belongsTo[reference]  +"] " + reference);
+			if (reference.referenced)
+			{
+				references.push(reference);
+			}
+			else
+			{
+				internalExtraReferences.push(reference);
+			}
+		}
+		else
+		{
+			// Check external refernces
+			if (externalBelongsTo[reference.id] !== undefined)
+			{
+				externalReferences.push(reference);
+			}
+			else
+			{
+				console.log("reference not found: " + reference.id);
+			}
+		}
+	}, this);*/
+		
+	var componentInnoScript = new innoScript();
+	componentInnoScript.CreateIssDependencyScript(component, references, internalExtraReferences, externalReferences, internalComponentsPath, externalComponentsPath, scriptsDir);
+	
+	var componentBatchFile = new postBuildBatchFile(postBuildBatchFilesDir, component);
+	componentBatchFile.CreatePostBuildBatchFile(component, references, internalExtraReferences, internalComponentsPath, externalComponentsPath);
+	console.log("New: 2 " + projectFile);
 }
 
 function ReadProjectDir(projectFile, bottomDir)

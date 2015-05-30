@@ -1,7 +1,14 @@
 /// <reference path="typings/node/node.d.ts"/>
 
-function projectReference(element) {
+function projectReference(element, obj) {
 	
+    if (obj != undefined)
+    {
+		console.log("AAA : " + obj.name);
+		this.id = obj.name;
+		this.referenced = (obj.referenced == undefined);
+		return;
+    }
 	var elementSplit = element.split(":");
 	this.id = elementSplit[0].trim();
 	
