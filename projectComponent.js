@@ -97,11 +97,7 @@ projectComponent.prototype.GenerateArtifactInclude = function()
 		}
 	}
 				
-	if (this.noConfig)
-	{
-		console.log("noConfig");
-	}
-	else
+	if (!this.noConfig)
 	{
 		if ((path.extname(artifactFullPath)) == ".exe")
 		{

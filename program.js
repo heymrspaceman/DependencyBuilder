@@ -116,11 +116,8 @@ function ReadSolutionJsonDir(solutionDir)
 }
 
 function ReadProjectJsonDir(projectFile, bottomDir)
-{
-	console.log("New: 1 " + projectFile);
-	
+{	
 	var component = bottomDir.replace(".json", "");
-	console.log("Processing " + component);
 	
 	var referenceFileContents = fs.readFileSync(projectFile, 'UTF-8');
 	var myJson = JSON.parse(referenceFileContents);
@@ -165,5 +162,4 @@ function ReadProjectJsonDir(projectFile, bottomDir)
 	
 	var componentBatchFile = new postBuildBatchFile(postBuildBatchFilesDir, component);
 	componentBatchFile.CreatePostBuildBatchFile(component, references, internalExtraReferences, internalComponentsPath, externalComponentsPath);
-	console.log("New: 2 " + projectFile);
 }
