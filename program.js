@@ -124,27 +124,18 @@ function ReadProjectJsonDir(projectFile, bottomDir)
 	var reference = "";
 	var references = [];		
 	var externalReferences = [];
-	var internalExtraReferences = [];	
-	var jsonReferences = [];	
+	var internalExtraReferences = [];
 	
 	
 	if (myJson.references != undefined)
 	{		
 		for (var i = 0; i < myJson.references.length; i++) {
 			reference = new projectReference(myJson.references[i]);
-			jsonReferences.push(reference);
 			if (internalBelongsTo[reference.id] !== undefined)
 			{
 				// This belongsTo can be used for CruiseControl
 				//console.log("[" + belongsTo[reference]  +"] " + reference);
-				if (reference.referenced)
-				{
-					references.push(reference);
-				}
-				else
-				{
-					//internalExtraReferences.push(reference);
-				}
+				references.push(reference);
 			}
 			else
 			{
@@ -165,7 +156,6 @@ function ReadProjectJsonDir(projectFile, bottomDir)
 	{
 		for (var i = 0; i < myJson.nonVisualStudioReferences.length; i++) {
 			reference = new projectReference(myJson.nonVisualStudioReferences[i]);
-			jsonReferences.push(reference);
 			if (internalBelongsTo[reference.id] !== undefined)
 			{
 				internalExtraReferences.push(reference);

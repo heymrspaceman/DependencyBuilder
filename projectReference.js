@@ -5,7 +5,6 @@ function projectReference(obj) {
     if (obj != undefined)
     {
 		this.id = obj.name;
-		this.referenced = (obj.referenced == undefined);
 		return;
     }
 }
@@ -14,7 +13,6 @@ projectReference.prototype.copy = function()
 {
 	var newReference = new projectReference(undefined);
 	newReference.id = this.id;
-	newReference.referenced = this.referenced;
 	
 	return newReference;
 }
