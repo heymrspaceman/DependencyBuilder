@@ -127,8 +127,8 @@ function ReadProjectJsonDir(projectFile, bottomDir)
 	var internalExtraReferences = [];	
 	var jsonReferences = [];	
 	
-	for (var i = 0; i < myJson.components.length; i++) {
-		reference = new projectReference(myJson.components[i]);
+	for (var i = 0; i < myJson.references.length; i++) {
+		reference = new projectReference(myJson.references[i]);
 		jsonReferences.push(reference);
 		if (internalBelongsTo[reference.id] !== undefined)
 		{
