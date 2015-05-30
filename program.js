@@ -175,8 +175,8 @@ function ReadProjectJsonDir(projectFile, bottomDir)
 		}
 	}
 		
-	var componentInnoScript = new innoScript();
-	componentInnoScript.CreateIssDependencyScript(component, references, internalExtraReferences, externalReferences, internalComponentsPath, externalComponentsPath, scriptsDir);
+	var componentInnoScript = new innoScript(scriptsDir, component);
+	componentInnoScript.CreateIssDependencyScript(component, references, internalExtraReferences, externalReferences, internalComponentsPath, externalComponentsPath);
 	
 	var componentBatchFile = new postBuildBatchFile(postBuildBatchFilesDir, component);
 	componentBatchFile.CreatePostBuildBatchFile(component, references, internalExtraReferences, internalComponentsPath, externalComponentsPath);

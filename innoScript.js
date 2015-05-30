@@ -3,13 +3,14 @@
 var fs = require('fs');
 var path = require('path');
 
-function innoScript() {
+function innoScript(dir, component) {
+	this.filename = component + "_dependencies.iss";
+	this.filename = path.join(dir, this.filename);
 }
 
 innoScript.prototype.CreateIssDependencyScript = function
 (component, internalDepencencies, internalExtraDependencies, externalDependencies, internalComponentsPath, externalComponentsPath, scriptsDir)
 {
-	var filename = component + "_dependencies.iss";
 	var fileContents = "[Files]\r\n;Internal\r\n";
 	var originalScript = false;
 	
@@ -67,8 +68,7 @@ innoScript.prototype.CreateIssDependencyScript = function
 			}, this);
 		}
 		
-		filename = path.join(scriptsDir, filename);
-		fs.writeFile(filename, fileContents);
+		fs.writeFile(this.filename, fileContents);
 	}
 }
 
