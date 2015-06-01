@@ -1,23 +1,17 @@
 /// <reference path="typings/node/node.d.ts"/>
 
-function projectReference(element) {
+function projectReference(obj) {
 	
-	var elementSplit = element.split(":");
-	this.id = elementSplit[0].trim();
-	
-	if (elementSplit.length > 1)
-	{
-		this.referenced = false;
-	}
-	else
-	{		
-		this.referenced = true;
-	}
+    if (obj != undefined)
+    {
+		this.id = obj.name;
+		return;
+    }
 }
 
 projectReference.prototype.copy = function()
 {
-	var newReference = new projectReference("");
+	var newReference = new projectReference(undefined);
 	newReference.id = this.id;
 	
 	return newReference;

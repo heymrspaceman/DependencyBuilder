@@ -26,9 +26,9 @@ var externalBelongsTo = [];
 var internalComponentsPath = [];
 var externalComponentsPath = [];
 var rootDir = ".";
-var internalComponentsDir = path.join(rootDir, "Dependencies\\Components");
-var externalComponentsDir = path.join(rootDir, "Dependencies\\Components\\external");
-var referencesDir = path.join(rootDir, "Dependencies\\References");
+var internalComponentsJsonDir = path.join(rootDir, "Dependencies\\ComponentsJson");
+var externalComponentsJsonDir = path.join(rootDir, "Dependencies\\ComponentsJson\\external");
+var referencesJsonDir = path.join(rootDir, "Dependencies\\ReferencesJson");
 var scriptsDir = path.join(rootDir, "Dependencies\\Generated scripts");
 var postBuildBatchFilesDir = path.join(rootDir, "Dependencies\\Generated scripts\\postbuild");
 
@@ -36,56 +36,52 @@ var postBuildBatchFilesDir = path.join(rootDir, "Dependencies\\Generated scripts
 //fs.mkdirSync(scriptsDir);
 //fs.mkdirSync(postBuildBatchFilesDir);
 
-fs.readdir(internalComponentsDir, function(err, internalFiles)
+fs.readdir(internalComponentsJsonDir, function(err, internalFiles)
 {
-	ReadComponents(internalComponentsDir, internalFiles, ProcessInternalComponent);	
+	ReadComponents(internalComponentsJsonDir, internalFiles, ProcessInternalComponent);	
 	
-	fs.readdir(externalComponentsDir, function(err, files)
+	fs.readdir(externalComponentsJsonDir, function(err, externalFiles)
 	{
-		ReadComponents(externalComponentsDir, files, ProcessExternalComponent);	
-	});
+		ReadComponents(externalComponentsJsonDir, externalFiles, ProcessExternalComponent);	
+	});	
 	
 	// Synchronous forEachs will have all finished by now	
-	fs.readdir(referencesDir, function(err, solutionDirs)
+	fs.readdir(referencesJsonDir, function(err, solutionJsonDirs)
 	{	
-		for (var i = 0; i < solutionDirs.length; i++) {			
-			ReadSolutionDir(path.join(referencesDir, solutionDirs[i]));			
+		for (var i = 0; i < solutionJsonDirs.length; i++) {			
+			ReadSolutionJsonDir(path.join(referencesJsonDir, solutionJsonDirs[i]));			
 		}
 	});
 });
 
-function ProcessInternalComponent(file, elementSplit)
+function ProcessInternalComponent(file, obj)
 {
-	var project = elementSplit[0];
-	var internalComponent = new projectComponent(elementSplit);
+	var project = obj.name;
+	
+	var internalComponent = new projectComponent(obj);
 	
 	internalBelongsTo[project] = file;
-	if (elementSplit.length > 1)
+	// Add this to the list of components
+	if (internalComponentsPath[project] == undefined)
 	{
-		// Add this to the list of components
-		if (internalComponentsPath[project] == undefined)
-		{
-			internalComponentsPath[project] = [];
-		}
-		internalComponentsPath[project].push(internalComponent);
+		internalComponentsPath[project] = [];
 	}
+	internalComponentsPath[project].push(internalComponent);
 }
 
-function ProcessExternalComponent(file, elementSplit)
+function ProcessExternalComponent(file, obj)
 {
-	var project = elementSplit[0];
-	var externalComponent = new projectComponent(elementSplit);
+	var project = obj.name;
+	
+	var externalComponent = new projectComponent(obj);
 	
 	externalBelongsTo[project] = file;
-	if (elementSplit.length > 1)
+	// Add this to the list of components		
+	if (externalComponentsPath[project] == undefined)
 	{
-		// Add this to the list of components
-		if (externalComponentsPath[project] == undefined)
-		{
-			externalComponentsPath[project] = [];
-		}
-		externalComponentsPath[project].push(externalComponent);
+		externalComponentsPath[project] = [];
 	}
+	externalComponentsPath[project].push(externalComponent);
 }
 
 function ReadComponents(componentsDir, files, ProcessComponent)
@@ -97,71 +93,90 @@ function ReadComponents(componentsDir, files, ProcessComponent)
 		if (!fs.statSync(fullPath).isDirectory())
 		{
 			var fileContents = fs.readFileSync(fullPath, 'UTF-8');
-	
-			fileContents.split(',').forEach(function(element) {
-				// Each component is split into the project name and the actual path to the artifact
-				var elementSplit = element.trim().split(":");
+			var myJson = JSON.parse(fileContents);
 				
-				ProcessComponent(file, elementSplit);
-			}, this);
+			for (var i = 0; i < myJson.components.length; i++) {
+			    ProcessComponent(file, myJson.components[i]);				
+			}
 		}
 	}, this);
 }
 
-function ReadSolutionDir(solutionDir)
+function ReadSolutionJsonDir(solutionDir)
 {
 	if (fs.statSync(solutionDir).isDirectory())
 	{
 		fs.readdir(solutionDir, function(err, projectFiles)
 		{
 			for (var i = 0; i < projectFiles.length; i++) {			
-				ReadProjectDir(path.join(solutionDir, projectFiles[i]), projectFiles[i]);			
+				ReadProjectJsonDir(path.join(solutionDir, projectFiles[i]), projectFiles[i]);			
 			}
 		});	
 	}
 }
 
-function ReadProjectDir(projectFile, bottomDir)
-{
-	var component = bottomDir.replace(".txt", "");
-	console.log("Processing " + component);
+function ReadProjectJsonDir(projectFile, bottomDir)
+{	
+	var component = bottomDir.replace(".json", "");
 	
 	var referenceFileContents = fs.readFileSync(projectFile, 'UTF-8');
+	var myJson = JSON.parse(referenceFileContents);
 	var reference = "";
 	var references = [];		
 	var externalReferences = [];
-	var internalExtraReferences = [];			
-	referenceFileContents.split(',').forEach(function(element) {
-		reference = new projectReference(element);
-		if (internalBelongsTo[reference.id] !== undefined)
-		{
-			// This belongsTo can be used for CruiseControl
-			//console.log("[" + belongsTo[reference]  +"] " + reference);
-			if (reference.referenced)
+	var internalExtraReferences = [];
+	
+	
+	if (myJson.references != undefined)
+	{		
+		for (var i = 0; i < myJson.references.length; i++) {
+			reference = new projectReference(myJson.references[i]);
+			if (internalBelongsTo[reference.id] !== undefined)
 			{
+				// This belongsTo can be used for CruiseControl
+				//console.log("[" + belongsTo[reference]  +"] " + reference);
 				references.push(reference);
 			}
 			else
 			{
-				internalExtraReferences.push(reference);
+				// Check external refernces
+				if (externalBelongsTo[reference.id] !== undefined)
+				{
+					externalReferences.push(reference);
+				}
+				else
+				{
+					console.log("reference not found: " + reference.id);
+				}
 			}
 		}
-		else
-		{
-			// Check external refernces
-			if (externalBelongsTo[reference.id] !== undefined)
+	}
+	
+	if (myJson.nonVisualStudioReferences != undefined)
+	{
+		for (var i = 0; i < myJson.nonVisualStudioReferences.length; i++) {
+			reference = new projectReference(myJson.nonVisualStudioReferences[i]);
+			if (internalBelongsTo[reference.id] !== undefined)
 			{
-				externalReferences.push(reference);
+				internalExtraReferences.push(reference);
 			}
 			else
 			{
-				console.log("reference not found: " + reference.id);
+				// Check external refernces
+				if (externalBelongsTo[reference.id] !== undefined)
+				{
+					externalReferences.push(reference);
+				}
+				else
+				{
+					console.log("reference not found: " + reference.id);
+				}
 			}
 		}
-	}, this);
+	}
 		
-	var componentInnoScript = new innoScript();
-	componentInnoScript.CreateIssDependencyScript(component, references, internalExtraReferences, externalReferences, internalComponentsPath, externalComponentsPath, scriptsDir);
+	var componentInnoScript = new innoScript(scriptsDir, component);
+	componentInnoScript.CreateIssDependencyScript(component, references, internalExtraReferences, externalReferences, internalComponentsPath, externalComponentsPath);
 	
 	var componentBatchFile = new postBuildBatchFile(postBuildBatchFilesDir, component);
 	componentBatchFile.CreatePostBuildBatchFile(component, references, internalExtraReferences, internalComponentsPath, externalComponentsPath);

@@ -2,7 +2,7 @@
 
 var path = require('path');
 
-function projectComponent(splitData) {
+function projectComponent(obj) {
   
   this.destinationFolder = "";
   this.register = false;
@@ -10,12 +10,16 @@ function projectComponent(splitData) {
   this.noConfig = false;
   this.original = false;
   
-  if (splitData.length > 0)
+  if (obj != undefined)
   {
-	  this.id = splitData[0];
-	  if (splitData.length > 1)
-	  { 
-		  var source = splitData[1];
+	  this.id = obj.name;
+	  this.original = (obj.original != undefined);
+	  this.noConfig = (obj.noConfig != undefined);
+	  this.register = (obj.register != undefined);
+	  
+	  if (obj.artifact != undefined)
+	  {
+		  var source = obj.artifact;
 		  if (source.indexOf("\\\\") > 0)
 		  {
 			  source = source.replace("\\\\",":\\");
@@ -24,59 +28,33 @@ function projectComponent(splitData) {
 		  else
 		  {				  	
 			  this.fullPath = false;
-		  }
+		  }		  
+		  
 		  this.source = source;
-		  		  
+		  this.sourceOnly = (obj.sourceOnly != undefined);
+		  if (obj.alternativeSource != undefined)
+		  {
+			  this.alternativeSource = obj.alternativeSource.replace("\\\\",":\\");
+		  }
+		  
+		  if (obj.destinationFolder != undefined)
+		  {
+			  this.destinationFolder = obj.destinationFolder;
+		  }
+			  		  
 		  // Extract the filename from the full artifact path, note the file may not exist at this point in time
 		  // so we cannot use fs.stat
 		  var sourceSplit = this.source.split("\\");	
 		  this.sourceFilenameOnly = sourceSplit[sourceSplit.length - 1];
-		  
-		  if (splitData.length > 2)
-		  {
-			  console.log("Unexpected split length " + splitData.length + " for " + this.id);
-			  this.destinationFolder = splitData[2];
-			  
-			  if (splitData.length > 3)
-			  {				 
-				  this.alternativeSource = splitData[3].replace("\\\\",":\\");;
-				  if (splitData.length > 4)
-				  {				 
-					  this.register = true;					  	
-					
-					  if (splitData.length > 5)
-					  {
-						  if (splitData[5] == "sourceOnly")
-						  {
-							  this.sourceOnly = true;
-						  }
-							  
-						  if (splitData.length > 6)
-						  {
-							  if (splitData[6] == "noConfig")
-							  {
-								  this.noConfig = true;
-							  }
-							  
-							  if (splitData.length > 7)
-							  {
-								  if (splitData[7] == "original")
-								  {
-									  this.original = true;
-								  }
-							  }
-						  }
-					  }	
-				  }
-			  }
-		  }
 	  }
+	  
+	  return;
   }  
 }
 
 projectComponent.prototype.copy = function()
 {
-	var newComponent = new projectComponent("");
+	var newComponent = new projectComponent(undefined);
 	newComponent.source = this.source;
 	newComponent.sourceFilenameOnly = this.sourceFilenameOnly;
 	newComponent.alternativeSource = this.alternativeSource;
@@ -119,11 +97,7 @@ projectComponent.prototype.GenerateArtifactInclude = function()
 		}
 	}
 				
-	if (this.noConfig)
-	{
-		console.log("noConfig");
-	}
-	else
+	if (!this.noConfig)
 	{
 		if ((path.extname(artifactFullPath)) == ".exe")
 		{
