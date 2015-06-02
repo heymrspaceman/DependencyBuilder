@@ -15,26 +15,30 @@
 
 var fs = require('fs');
 var path = require('path');
-var async = require('async');
 var projectComponent = require("./projectComponent.js");
 var projectReference = require("./projectReference.js");
 var innoScript = require("./innoScript.js");
 var postBuildBatchFile = require("./postBuildBatchFile.js");
 
+// First argument (if passed in is the root folder)
+var rootDir = ".";
+if (process.argv.length > 2)
+{
+	rootDir = process.argv[2];
+}
+
 var internalBelongsTo = [];
 var externalBelongsTo = [];
 var internalComponentsPath = [];
 var externalComponentsPath = [];
-var rootDir = ".";
 var internalComponentsJsonDir = path.join(rootDir, "Dependencies\\ComponentsJson");
 var externalComponentsJsonDir = path.join(rootDir, "Dependencies\\ComponentsJson\\external");
 var referencesJsonDir = path.join(rootDir, "Dependencies\\ReferencesJson");
 var scriptsDir = path.join(rootDir, "Dependencies\\Generated scripts");
 var postBuildBatchFilesDir = path.join(rootDir, "Dependencies\\Generated scripts\\postbuild");
 
-// TODO Delete all previous audo generated scripts
-//fs.mkdirSync(scriptsDir);
-//fs.mkdirSync(postBuildBatchFilesDir);
+CreateDirectoryIfNotExists(scriptsDir);
+CreateDirectoryIfNotExists(postBuildBatchFilesDir);
 
 fs.readdir(internalComponentsJsonDir, function(err, internalFiles)
 {
@@ -53,6 +57,37 @@ fs.readdir(internalComponentsJsonDir, function(err, internalFiles)
 		}
 	});
 });
+
+function CreateDirectoryIfNotExists(dirToBeCreated)
+{
+	var createDir = false;
+	try
+	{
+		var statDir = fs.lstatSync(dirToBeCreated);
+		if (!statDir.isDirectory())
+		{
+			fs.mkdirSync(dirToBeCreated);		
+		}
+	}
+	catch (e)
+	{
+		console.log("Directory doesn't exist: " + dirToBeCreated);
+		createDir = true;
+	}
+	
+	if (createDir)
+	{
+		try
+		{
+			fs.mkdirSync(dirToBeCreated);
+			console.log("Directory created: " + dirToBeCreated);
+		}
+		catch (e)
+		{
+			console.log("Problem creating directory: " + dirToBeCreated);
+		}
+	}
+}
 
 function ProcessInternalComponent(file, obj)
 {

@@ -9,6 +9,7 @@ function projectComponent(obj) {
   this.sourceOnly = false;
   this.noConfig = false;
   this.original = false;
+  this.postBuild = true;
   
   if (obj != undefined)
   {
@@ -16,6 +17,7 @@ function projectComponent(obj) {
 	  this.original = (obj.original != undefined);
 	  this.noConfig = (obj.noConfig != undefined);
 	  this.register = (obj.register != undefined);
+	  this.postBuild = (obj.postBuild == undefined);
 	  
 	  if (obj.artifact != undefined)
 	  {

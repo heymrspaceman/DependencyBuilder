@@ -12,6 +12,7 @@ postBuildBatchFile.prototype.CreatePostBuildBatchFile = function
 (component, dependencies, internalExtraDependencies, internalComponentsPath, externalComponentsPath)
 {	
 	var originalBatchFile = false;
+	var createPostBuild = false;
 	
 	var fileContents = "@echo off\r\n";
 	fileContents = fileContents + "REM 2 parameters are passed in wrapped in quotes, but this causes problems when using them but putting them in variables solves it\r\n";
@@ -27,11 +28,12 @@ postBuildBatchFile.prototype.CreatePostBuildBatchFile = function
 	{
 		fetchedComponents.forEach(function(fetchedComponent) {
 			originalBatchFile = originalBatchFile || fetchedComponent.original;
+			createPostBuild = createPostBuild || fetchedComponent.postBuild;
 			fileContents = fileContents + this.GenerateArtifactBatchCopy(fetchedComponent);
 		}, this);
 	}
-		
-	if (!originalBatchFile)
+			
+	if ((!originalBatchFile) && (createPostBuild))
 	{
 		dependencies.forEach(function(ref) {
 			fileContents = fileContents + this.BuildBatchFileCall(ref);
