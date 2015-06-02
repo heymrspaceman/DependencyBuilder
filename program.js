@@ -163,8 +163,6 @@ function ReadProjectJsonDir(projectFile, bottomDir)
 			reference = new projectReference(myJson.references[i]);
 			if (internalComponentsPath[reference.id] !== undefined)
 			{
-				// This belongsTo can be used for CruiseControl
-				//console.log("[" + belongsTo[reference]  +"] " + reference);
 				reference.components = internalComponentsPath[reference.id];
 				references.push(reference);
 			}
@@ -175,10 +173,6 @@ function ReadProjectJsonDir(projectFile, bottomDir)
 				{
 					reference.components = externalComponentsPath[reference.id];
 					externalReferences.push(reference);
-				}
-				else
-				{
-					console.log("reference not found: " + reference.id);
 				}
 			}
 		}
@@ -200,10 +194,6 @@ function ReadProjectJsonDir(projectFile, bottomDir)
 				{
 					reference.components = externalComponentsPath[reference.id];
 					externalReferences.push(reference);
-				}
-				else
-				{
-					console.log("reference not found: " + reference.id);
 				}
 			}
 		}
