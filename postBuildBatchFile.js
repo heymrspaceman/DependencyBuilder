@@ -9,7 +9,7 @@ function postBuildBatchFile(dir, component) {
 }
 
 postBuildBatchFile.prototype.CreatePostBuildBatchFile = function
-(component, dependencies, internalExtraDependencies, internalComponentsPath)
+(components, dependencies, internalExtraDependencies)
 {	
 	var originalBatchFile = false;
 	var createPostBuild = false;
@@ -23,10 +23,9 @@ postBuildBatchFile.prototype.CreatePostBuildBatchFile = function
 	fileContents = fileContents + "REM echo \"*** Parameter 2 removed quotes: (%param2%)\"\r\n";
 	fileContents = fileContents + "\r\n";
 	
-	var fetchedComponents = internalComponentsPath[component];
-	if (fetchedComponents !== undefined)
+	if (components !== undefined)
 	{
-		fetchedComponents.forEach(function(fetchedComponent) {
+		components.forEach(function(fetchedComponent) {
 			originalBatchFile = originalBatchFile || fetchedComponent.original;
 			createPostBuild = createPostBuild || fetchedComponent.postBuild;
 			fileContents = fileContents + this.GenerateArtifactBatchCopy(fetchedComponent);

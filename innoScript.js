@@ -9,17 +9,15 @@ function innoScript(dir, component) {
 }
 
 innoScript.prototype.CreateIssDependencyScript = function
-(component, internalDepencencies, internalExtraDependencies, externalDependencies, internalComponentsPath, externalComponentsPath, scriptsDir)
+(components, internalDepencencies, internalExtraDependencies, externalDependencies)
 {
 	var fileContents = "[Files]\r\n;Internal\r\n";
 	var originalScript = false;
 	
-	// Build artifacts
-	var fetchedComponents = internalComponentsPath[component];
-		
-	if (fetchedComponents !== undefined)
+	// Build artifacts		
+	if (components !== undefined)
 	{
-		fetchedComponents.forEach(function(fetchedComponent) {
+		components.forEach(function(fetchedComponent) {
 			originalScript = originalScript || fetchedComponent.original;
 			fileContents = fileContents + fetchedComponent.GenerateArtifactInclude(fetchedComponent.source) + "\r\n";
 		}, this);
@@ -37,12 +35,11 @@ innoScript.prototype.CreateIssDependencyScript = function
 			
 		if (internalExtraDependencies.length > 0) {
 			fileContents = fileContents + "\r\n;Internal but not referenced in Visual Studio\r\n";
-			internalExtraDependencies.forEach(function(extraRef) {			
-				var internalComponents = internalComponentsPath[extraRef.id];
+			internalExtraDependencies.forEach(function(extraRef) {
 				var scriptFolder = "";
-				if (internalComponents !== undefined)
+				if (extraRef.components !== undefined)
 				{
-					internalComponents.forEach(function(internalComponent) {
+					extraRef.components.forEach(function(internalComponent) {
 						if (internalComponent.original)
 						{
 							scriptFolder = "original\\";
@@ -57,11 +54,10 @@ innoScript.prototype.CreateIssDependencyScript = function
 		if (externalDependencies.length > 0) {
 			fileContents = fileContents + "\r\n;External";
 			externalDependencies.forEach(function(ref) {
-				var externalComponents = externalComponentsPath[ref.id];
-				if (externalComponents !== undefined)
+				if (ref.components !== undefined)
 				{
 					fileContents = fileContents + "\r\n;" + ref.id + "\r\n";
-					externalComponents.forEach(function(externalComponent) {
+					ref.components.forEach(function(externalComponent) {
 						fileContents = fileContents + externalComponent.GenerateExternalIssCopy();
 					}, this);
 				}

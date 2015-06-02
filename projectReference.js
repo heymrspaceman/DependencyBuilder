@@ -2,6 +2,7 @@
 
 function projectReference(obj) {
 	
+	this.components = undefined;
     if (obj != undefined)
     {
 		this.id = obj.name;

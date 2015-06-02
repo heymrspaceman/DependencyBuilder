@@ -157,7 +157,6 @@ function ReadProjectJsonDir(projectFile, bottomDir)
 	var externalReferences = [];
 	var internalExtraReferences = [];
 	
-	
 	if (myJson.references != undefined)
 	{		
 		for (var i = 0; i < myJson.references.length; i++) {
@@ -166,6 +165,7 @@ function ReadProjectJsonDir(projectFile, bottomDir)
 			{
 				// This belongsTo can be used for CruiseControl
 				//console.log("[" + belongsTo[reference]  +"] " + reference);
+				reference.components = internalComponentsPath[reference.id];
 				references.push(reference);
 			}
 			else
@@ -173,6 +173,7 @@ function ReadProjectJsonDir(projectFile, bottomDir)
 				// Check external refernces
 				if (externalComponentsPath[reference.id] !== undefined)
 				{
+					reference.components = externalComponentsPath[reference.id];
 					externalReferences.push(reference);
 				}
 				else
@@ -189,6 +190,7 @@ function ReadProjectJsonDir(projectFile, bottomDir)
 			reference = new projectReference(myJson.nonVisualStudioReferences[i]);
 			if (internalComponentsPath[reference.id] !== undefined)
 			{
+				reference.components = internalComponentsPath[reference.id];
 				internalExtraReferences.push(reference);
 			}
 			else
@@ -196,6 +198,7 @@ function ReadProjectJsonDir(projectFile, bottomDir)
 				// Check external refernces
 				if (externalComponentsPath[reference.id] !== undefined)
 				{
+					reference.components = externalComponentsPath[reference.id];
 					externalReferences.push(reference);
 				}
 				else
@@ -206,9 +209,10 @@ function ReadProjectJsonDir(projectFile, bottomDir)
 		}
 	}
 		
+	var components = internalComponentsPath[component];
 	var componentInnoScript = new innoScript(scriptsDir, component);
-	componentInnoScript.CreateIssDependencyScript(component, references, internalExtraReferences, externalReferences, internalComponentsPath, externalComponentsPath);
+	componentInnoScript.CreateIssDependencyScript(components, references, internalExtraReferences, externalReferences);
 	
 	var componentBatchFile = new postBuildBatchFile(postBuildBatchFilesDir, component);
-	componentBatchFile.CreatePostBuildBatchFile(component, references, internalExtraReferences, internalComponentsPath);
+	componentBatchFile.CreatePostBuildBatchFile(components, references, internalExtraReferences);
 }
