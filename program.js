@@ -27,8 +27,6 @@ if (process.argv.length > 2)
 	rootDir = process.argv[2];
 }
 
-var internalBelongsTo = [];
-var externalBelongsTo = [];
 var internalComponentsPath = [];
 var externalComponentsPath = [];
 var internalComponentsJsonDir = path.join(rootDir, "Dependencies\\ComponentsJson");
@@ -95,7 +93,6 @@ function ProcessInternalComponent(file, obj)
 	
 	var internalComponent = new projectComponent(obj);
 	
-	internalBelongsTo[project] = file;
 	// Add this to the list of components
 	if (internalComponentsPath[project] == undefined)
 	{
@@ -110,7 +107,6 @@ function ProcessExternalComponent(file, obj)
 	
 	var externalComponent = new projectComponent(obj);
 	
-	externalBelongsTo[project] = file;
 	// Add this to the list of components		
 	if (externalComponentsPath[project] == undefined)
 	{
@@ -166,7 +162,7 @@ function ReadProjectJsonDir(projectFile, bottomDir)
 	{		
 		for (var i = 0; i < myJson.references.length; i++) {
 			reference = new projectReference(myJson.references[i]);
-			if (internalBelongsTo[reference.id] !== undefined)
+			if (internalComponentsPath[reference.id] !== undefined)
 			{
 				// This belongsTo can be used for CruiseControl
 				//console.log("[" + belongsTo[reference]  +"] " + reference);
@@ -175,7 +171,7 @@ function ReadProjectJsonDir(projectFile, bottomDir)
 			else
 			{
 				// Check external refernces
-				if (externalBelongsTo[reference.id] !== undefined)
+				if (externalComponentsPath[reference.id] !== undefined)
 				{
 					externalReferences.push(reference);
 				}
@@ -191,14 +187,14 @@ function ReadProjectJsonDir(projectFile, bottomDir)
 	{
 		for (var i = 0; i < myJson.nonVisualStudioReferences.length; i++) {
 			reference = new projectReference(myJson.nonVisualStudioReferences[i]);
-			if (internalBelongsTo[reference.id] !== undefined)
+			if (internalComponentsPath[reference.id] !== undefined)
 			{
 				internalExtraReferences.push(reference);
 			}
 			else
 			{
 				// Check external refernces
-				if (externalBelongsTo[reference.id] !== undefined)
+				if (externalComponentsPath[reference.id] !== undefined)
 				{
 					externalReferences.push(reference);
 				}
