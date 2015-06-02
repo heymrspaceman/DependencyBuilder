@@ -20,11 +20,17 @@ var projectReference = require("./projectReference.js");
 var innoScript = require("./innoScript.js");
 var postBuildBatchFile = require("./postBuildBatchFile.js");
 
+// First argument (if passed in is the root folder)
+var rootDir = ".";
+if (process.argv.length > 2)
+{
+	rootDir = process.argv[2];
+}
+
 var internalBelongsTo = [];
 var externalBelongsTo = [];
 var internalComponentsPath = [];
 var externalComponentsPath = [];
-var rootDir = ".";
 var internalComponentsJsonDir = path.join(rootDir, "Dependencies\\ComponentsJson");
 var externalComponentsJsonDir = path.join(rootDir, "Dependencies\\ComponentsJson\\external");
 var referencesJsonDir = path.join(rootDir, "Dependencies\\ReferencesJson");
