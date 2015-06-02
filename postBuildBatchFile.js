@@ -9,7 +9,7 @@ function postBuildBatchFile(dir, component) {
 }
 
 postBuildBatchFile.prototype.CreatePostBuildBatchFile = function
-(component, dependencies, internalExtraDependencies, internalComponentsPath, externalComponentsPath)
+(component, dependencies, internalExtraDependencies, internalComponentsPath)
 {	
 	var originalBatchFile = false;
 	var createPostBuild = false;
