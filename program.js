@@ -31,9 +31,8 @@ var referencesJsonDir = path.join(rootDir, "Dependencies\\ReferencesJson");
 var scriptsDir = path.join(rootDir, "Dependencies\\Generated scripts");
 var postBuildBatchFilesDir = path.join(rootDir, "Dependencies\\Generated scripts\\postbuild");
 
-// TODO Delete all previous audo generated scripts
-//fs.mkdirSync(scriptsDir);
-//fs.mkdirSync(postBuildBatchFilesDir);
+CreateDirectoryIfNotExists(scriptsDir);
+CreateDirectoryIfNotExists(postBuildBatchFilesDir);
 
 fs.readdir(internalComponentsJsonDir, function(err, internalFiles)
 {
@@ -52,6 +51,37 @@ fs.readdir(internalComponentsJsonDir, function(err, internalFiles)
 		}
 	});
 });
+
+function CreateDirectoryIfNotExists(dirToBeCreated)
+{
+	var createDir = false;
+	try
+	{
+		var statDir = fs.lstatSync(dirToBeCreated);
+		if (!statDir.isDirectory())
+		{
+			fs.mkdirSync(dirToBeCreated);		
+		}
+	}
+	catch (e)
+	{
+		console.log("Directory doesn't exist: " + dirToBeCreated);
+		createDir = true;
+	}
+	
+	if (createDir)
+	{
+		try
+		{
+			fs.mkdirSync(dirToBeCreated);
+			console.log("Directory created: " + dirToBeCreated);
+		}
+		catch (e)
+		{
+			console.log("Problem creating directory: " + dirToBeCreated);
+		}
+	}
+}
 
 function ProcessInternalComponent(file, obj)
 {
