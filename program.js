@@ -15,7 +15,6 @@
 
 var fs = require('fs');
 var path = require('path');
-var async = require('async');
 var projectComponent = require("./projectComponent.js");
 var projectReference = require("./projectReference.js");
 var innoScript = require("./innoScript.js");
