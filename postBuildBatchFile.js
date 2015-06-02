@@ -40,10 +40,16 @@ postBuildBatchFile.prototype.CreatePostBuildBatchFile = function
 		
 		if (internalExtraDependencies.length > 0)
 		{
-			fileContents = fileContents + "\r\nREM Internal but not referenced in Visual Studio\r\n";
+			var extraText = "";
 			internalExtraDependencies.forEach(function(ref) {
-				fileContents = fileContents + this.BuildBatchFileCall(ref);
+				extraText = extraText + this.BuildBatchFileCall(ref);
 			}, this);
+			
+			if (extraText != "")
+			{
+				fileContents = fileContents + "\r\nREM Internal but not referenced in Visual Studio\r\n";
+				fileContents = fileContents + extraText;
+			}
 		}
 			
 		fs.writeFile(this.filename, fileContents);
@@ -51,10 +57,14 @@ postBuildBatchFile.prototype.CreatePostBuildBatchFile = function
 }
 
 postBuildBatchFile.prototype.BuildBatchFileCall = function(reference)
-{
-	var text = "Call \"%param1%\\dependencies_svn\\scripts\\postbuild\\CopyDependenciesInternal";
-	text = text + reference.id + ".bat\" \"%param1%\" \"%param2%\" \"%param3%\"\r\n";
-	text = text + "if errorlevel 1 echo \"Error in %0\" exit\r\n";
+{	
+	var text = "";
+	if (reference.requiresPostBuild())
+	{
+		text = "Call \"%param1%\\dependencies_svn\\scripts\\postbuild\\CopyDependenciesInternal";
+		text = text + reference.id + ".bat\" \"%param1%\" \"%param2%\" \"%param3%\"\r\n";
+		text = text + "if errorlevel 1 echo \"Error in %0\" exit\r\n";
+	}
 	
 	return text;
 }
