@@ -51,6 +51,7 @@ fs.readdir(internalComponentsJsonDir, function(err, internalFiles)
 	fs.readdir(referencesJsonDir, function(err, solutionJsonDirs)
 	{	
 		for (var i = 0; i < solutionJsonDirs.length; i++) {			
+			console.log("Process solution " + solutionJsonDirs[i]);
 			ReadSolutionJsonDir(path.join(referencesJsonDir, solutionJsonDirs[i]));			
 		}
 	});
@@ -122,7 +123,8 @@ function ReadComponents(componentsDir, files, ProcessComponent)
 		var fullPath = path.join(componentsDir, file);
 		
 		if (!fs.statSync(fullPath).isDirectory())
-		{
+		{		
+			console.log("Process component " + file);
 			var fileContents = fs.readFileSync(fullPath, 'UTF-8');
 			var myJson = JSON.parse(fileContents);
 				
