@@ -29,11 +29,11 @@ if (process.argv.length > 2)
 
 var internalComponentsPath = [];
 var externalComponentsPath = [];
-var internalComponentsJsonDir = path.join(rootDir, "Dependencies\\ComponentsJson");
-var externalComponentsJsonDir = path.join(rootDir, "Dependencies\\ComponentsJson\\external");
-var referencesJsonDir = path.join(rootDir, "Dependencies\\ReferencesJson");
-var scriptsDir = path.join(rootDir, "Dependencies\\Generated scripts");
-var postBuildBatchFilesDir = path.join(rootDir, "Dependencies\\Generated scripts\\postbuild");
+var internalComponentsJsonDir = path.join(rootDir, "..\\ComponentsJson");
+var externalComponentsJsonDir = path.join(rootDir, "..\\ComponentsJson\\external");
+var referencesJsonDir = path.join(rootDir, "..\\ReferencesJson");
+var scriptsDir = path.join(rootDir, "..\\..\\Generated scripts");
+var postBuildBatchFilesDir = path.join(rootDir, "..\\..\\Generated scripts\\postbuild");
 
 CreateDirectoryIfNotExists(scriptsDir);
 CreateDirectoryIfNotExists(postBuildBatchFilesDir);
@@ -51,6 +51,7 @@ fs.readdir(internalComponentsJsonDir, function(err, internalFiles)
 	fs.readdir(referencesJsonDir, function(err, solutionJsonDirs)
 	{	
 		for (var i = 0; i < solutionJsonDirs.length; i++) {			
+			console.log("Process solution " + solutionJsonDirs[i]);
 			ReadSolutionJsonDir(path.join(referencesJsonDir, solutionJsonDirs[i]));			
 		}
 	});
@@ -122,7 +123,8 @@ function ReadComponents(componentsDir, files, ProcessComponent)
 		var fullPath = path.join(componentsDir, file);
 		
 		if (!fs.statSync(fullPath).isDirectory())
-		{
+		{		
+			console.log("Process component " + file);
 			var fileContents = fs.readFileSync(fullPath, 'UTF-8');
 			var myJson = JSON.parse(fileContents);
 				
