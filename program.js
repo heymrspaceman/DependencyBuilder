@@ -19,6 +19,7 @@ var projectComponent = require("./projectComponent.js");
 var projectReference = require("./projectReference.js");
 var innoScript = require("./innoScript.js");
 var postBuildBatchFile = require("./postBuildBatchFile.js");
+var internalBelongsTo = [];
 
 // First argument (if passed in is the root folder)
 var rootDir = ".";
@@ -34,9 +35,18 @@ var externalComponentsJsonDir = path.join(rootDir, "..\\ComponentsJson\\external
 var referencesJsonDir = path.join(rootDir, "..\\ReferencesJson");
 var scriptsDir = path.join(rootDir, "..\\..\\Generated scripts");
 var postBuildBatchFilesDir = path.join(rootDir, "..\\..\\Generated scripts\\postbuild");
+var cruiseControlFilesDir = path.join(rootDir, "..\\..\\CruiseControl files");
+var cruiseControlBootstrappersDir = path.join(cruiseControlFilesDir, "ProjectBootstrappers");
 
 CreateDirectoryIfNotExists(scriptsDir);
 CreateDirectoryIfNotExists(postBuildBatchFilesDir);
+CreateDirectoryIfNotExists(cruiseControlFilesDir);
+CreateDirectoryIfNotExists(cruiseControlBootstrappersDir);
+
+function caseInsensitiveSort(a, b)
+{
+	return a.toLowerCase().localeCompare(b.toLowerCase());
+}
 
 fs.readdir(internalComponentsJsonDir, function(err, internalFiles)
 {
@@ -50,11 +60,70 @@ fs.readdir(internalComponentsJsonDir, function(err, internalFiles)
 	// Synchronous forEachs will have all finished by now	
 	fs.readdir(referencesJsonDir, function(err, solutionJsonDirs)
 	{	
-		for (var i = 0; i < solutionJsonDirs.length; i++) {			
+		var ccProjects = [];
+		ccProjects.push("Dependencies");
+		ccProjects.push("Installs");
+		var ccProjectsDependencies = [];
+		ccProjectsDependencies.push("");
+		ccProjectsDependencies.push("");
+
+		for (var i = 0; i < solutionJsonDirs.length; i++) {	
+			var newDeps = [];		
 			console.log("Process solution " + solutionJsonDirs[i]);
-			ReadSolutionJsonDir(path.join(referencesJsonDir, solutionJsonDirs[i]));			
+			ReadSolutionJsonDir(path.join(referencesJsonDir, solutionJsonDirs[i]), newDeps);
+			ccProjects.push(solutionJsonDirs[i]);
+		
+			var depsText = ""; 
+			if ((solutionJsonDirs[i] == "AdminTool") || (solutionJsonDirs[i] == "legacyRFS") || (solutionJsonDirs[i] == "TitanRecorder") || (solutionJsonDirs[i] == "TitanVision"))
+			{
+				depsText = depsText + "InstallsOutput.txt,";
+			}
+			depsText = depsText + "DependenciesOutput.txt";
+			
+			// Remove duplicates and sort
+			var sortedDeps = [];		
+			//newDeps.sort();
+			//Annoyingly the default sort treats upper and lower case differently
+			newDeps.sort(caseInsensitiveSort);
+	
+			var previous = "";
+			for (var z = 0; z < newDeps.length; z++) {
+				if (newDeps[z] !== solutionJsonDirs[i])
+				{
+					if (previous != newDeps[z])
+					{
+						sortedDeps.push(newDeps[z]);
+						previous = newDeps[z];
+					}
+				}
+			}			
+			
+			if (sortedDeps.length > 0)
+			{
+				depsText = depsText + "," + sortedDeps[0] + "Output.txt";
+				for (var k = 1; k < sortedDeps.length; k++) {
+					depsText = depsText + "," + sortedDeps[k] + "Output.txt";
+				}
+			}
+			ccProjectsDependencies.push(depsText);		
 		}
-	});
+		
+		console.log('Waiting for the end ....,');
+		setTimeout(function() {
+		var depsText = "<project name=\"bootstrapperDependencies\">\r\n";
+		depsText = depsText + "\t<!-- The following dependencies properties is read by some javascript in svn-macros.xml so don't include extra spaces when modifying -->\r\n";
+		
+		for (var j = 0; j < ccProjects.length; j++) {	
+			depsText = depsText + "\t<property name=\"" + ccProjects[j] + "Dependencies\"";
+			depsText = depsText + " value=\"" + ccProjectsDependencies[j] + "\"/>\r\n";
+		}
+		
+		depsText = depsText + "</project>";
+		var depsFile = path.join(cruiseControlBootstrappersDir, "BootstrapperDependencies.xml");
+		fs.writeFile(depsFile, depsText);
+		    console.log('THIS IS THE END');
+		}, 3000);
+	});	
 });
 
 function CreateDirectoryIfNotExists(dirToBeCreated)
@@ -93,6 +162,12 @@ function ProcessInternalComponent(file, obj)
 	var project = obj.name;
 	
 	var internalComponent = new projectComponent(obj);
+	if (!internalComponent.testProject)
+	{
+		var parent = file.replace(".json", "");
+		internalBelongsTo[internalComponent.id] = parent;
+		//console.log("This: " + internalComponent.id + " belongs to " + parent);
+	}
 	
 	// Add this to the list of components
 	if (internalComponentsPath[project] == undefined)
@@ -135,20 +210,18 @@ function ReadComponents(componentsDir, files, ProcessComponent)
 	}, this);
 }
 
-function ReadSolutionJsonDir(solutionDir)
+function ReadSolutionJsonDir(solutionDir, newDeps)
 {
 	if (fs.statSync(solutionDir).isDirectory())
 	{
-		fs.readdir(solutionDir, function(err, projectFiles)
-		{
-			for (var i = 0; i < projectFiles.length; i++) {			
-				ReadProjectJsonDir(path.join(solutionDir, projectFiles[i]), projectFiles[i]);			
-			}
-		});	
+		var projectFiles = fs.readdirSync(solutionDir);	
+		for (var i = 0; i < projectFiles.length; i++) {			
+			ReadProjectJsonDir(path.join(solutionDir, projectFiles[i]), projectFiles[i], newDeps);			
+		}	
 	}
 }
 
-function ReadProjectJsonDir(projectFile, bottomDir)
+function ReadProjectJsonDir(projectFile, bottomDir, newDeps)
 {	
 	var component = bottomDir.replace(".json", "");
 	
@@ -207,4 +280,19 @@ function ReadProjectJsonDir(projectFile, bottomDir)
 	
 	var componentBatchFile = new postBuildBatchFile(postBuildBatchFilesDir, component);
 	componentBatchFile.CreatePostBuildBatchFile(components, references, internalExtraReferences);
+	
+	if (internalBelongsTo[component] != undefined)
+	{
+		var referencesText = "";
+		for (var i = 0; i < references.length; i++) {
+			referencesText = referencesText + internalBelongsTo[references[i].id] + ",";	
+			if (internalBelongsTo[references[i].id] == undefined)
+			{
+				console.log("Can't find " + references[i].id + " - " + projectFile);
+			}	
+			newDeps.push(internalBelongsTo[references[i].id]);
+		}
+		
+		console.log(component + " needs " + referencesText);
+	}
 }

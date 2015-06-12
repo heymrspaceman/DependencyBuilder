@@ -18,6 +18,7 @@ function projectComponent(obj) {
 	  this.noConfig = (obj.noConfig != undefined);
 	  this.register = (obj.register != undefined);
 	  this.postBuild = (obj.postBuild == undefined);
+	  this.testProject = (obj.testProject != undefined);
 	  
 	  if (obj.artifact != undefined)
 	  {
