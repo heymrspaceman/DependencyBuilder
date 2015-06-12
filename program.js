@@ -281,15 +281,18 @@ function ReadProjectJsonDir(projectFile, bottomDir, newDeps)
 	var componentBatchFile = new postBuildBatchFile(postBuildBatchFilesDir, component);
 	componentBatchFile.CreatePostBuildBatchFile(components, references, internalExtraReferences);
 	
-	var referencesText = "";
-	for (var i = 0; i < references.length; i++) {
-		referencesText = referencesText + internalBelongsTo[references[i].id] + ",";	
-		if (internalBelongsTo[references[i].id] == undefined)
-		{
-			console.log("Can't find " + references[i].id + " - " + projectFile);
-		}	
-		newDeps.push(internalBelongsTo[references[i].id]);
+	if (internalBelongsTo[component] != undefined)
+	{
+		var referencesText = "";
+		for (var i = 0; i < references.length; i++) {
+			referencesText = referencesText + internalBelongsTo[references[i].id] + ",";	
+			if (internalBelongsTo[references[i].id] == undefined)
+			{
+				console.log("Can't find " + references[i].id + " - " + projectFile);
+			}	
+			newDeps.push(internalBelongsTo[references[i].id]);
+		}
+		
+		console.log(component + " needs " + referencesText);
 	}
-	
-	console.log(component + " needs " + referencesText);
 }
